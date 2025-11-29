@@ -1,0 +1,22 @@
+{
+  "name": "angular-steadyflow",
+  "version": "0.1.0",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "peerDependencies": {
+    "@angular/core": "^19.0.0"
+  },
+  "dependencies": {
+    "steadyflow": "workspace:*"
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts --external @angular/core",
+    "dev": "tsup src/index.ts --format cjs,esm --dts --watch --external @angular/core"
+  },
+  "devDependencies": {
+    "@angular/core": "^21.0.1",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3"
+  }
+}

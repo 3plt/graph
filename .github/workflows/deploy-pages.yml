@@ -1,0 +1,32 @@
+name: Deploy Demo to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    
+    steps:
+      - uses: actions/checkout@v3
+      - uses: pnpm/action-setup@v2
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      
+      - run: pnpm install
+      - run: pnpm build:core
+      - run: pnpm build:react
+      - run: pnpm build:vue
+      - run: pnpm build:site
+      
+      - uses: actions/upload-pages-artifact@v2
+        with:
+          path: apps/demo-site/dist
+      
+      - uses: actions/deploy-pages@v2

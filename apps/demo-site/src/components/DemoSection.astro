@@ -1,0 +1,167 @@
+---
+import ReactDemo from './ReactDemo';
+import VueDemo from './VueDemo.vue';
+---
+
+<section class="demo-section" id="demo">
+  <div class="container">
+    <h2>Interactive Demo</h2>
+    <p class="subtitle">Try SteadyFlow in your framework of choice</p>
+    
+    <div class="demo-container">
+      <div class="tabs">
+        <button class="tab active" data-tab="react">React</button>
+        <button class="tab" data-tab="vue">Vue</button>
+        <button class="tab" data-tab="angular">Angular</button>
+      </div>
+
+      <div class="demo-content">
+        <div class="demo-panel active" data-panel="react">
+          <ReactDemo client:load />
+        </div>
+        <div class="demo-panel" data-panel="vue">
+          <VueDemo client:load />
+        </div>
+        <div class="demo-panel" data-panel="angular">
+          <div class="placeholder">
+            <p>Angular demo coming soon!</p>
+            <code>npm install angular-steadyflow</code>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  // Tab switching functionality
+  const tabs = document.querySelectorAll('.tab');
+  const panels = document.querySelectorAll('.demo-panel');
+
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const targetTab = tab.getAttribute('data-tab');
+      
+      // Update active tab
+      tabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      
+      // Update active panel
+      panels.forEach(panel => {
+        if (panel.getAttribute('data-panel') === targetTab) {
+          panel.classList.add('active');
+        } else {
+          panel.classList.remove('active');
+        }
+      });
+    });
+  });
+</script>
+
+<style>
+  .demo-section {
+    padding: 4rem 0;
+    background: var(--color-bg-secondary);
+  }
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 2rem;
+  }
+
+  h2 {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .subtitle {
+    color: var(--color-text-muted);
+    font-size: 1.125rem;
+    margin-bottom: 2rem;
+  }
+
+  .demo-container {
+    background: white;
+    border-radius: 0.75rem;
+    overflow: hidden;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .tabs {
+    display: flex;
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-bg-secondary);
+  }
+
+  .tab {
+    flex: 1;
+    padding: 1rem 2rem;
+    background: none;
+    border: none;
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    border-bottom: 2px solid transparent;
+  }
+
+  .tab:hover {
+    color: var(--color-text);
+    background: rgba(59, 130, 246, 0.05);
+  }
+
+  .tab.active {
+    color: var(--color-primary);
+    background: white;
+    border-bottom-color: var(--color-primary);
+  }
+
+  .demo-content {
+    position: relative;
+    min-height: 500px;
+  }
+
+  .demo-panel {
+    display: none;
+    padding: 2rem;
+  }
+
+  .demo-panel.active {
+    display: block;
+  }
+
+  .placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+    gap: 1rem;
+  }
+
+  .placeholder p {
+    font-size: 1.25rem;
+    color: var(--color-text-muted);
+  }
+
+  .placeholder code {
+    font-size: 1rem;
+    padding: 0.5rem 1rem;
+  }
+
+  @media (max-width: 768px) {
+    .tabs {
+      flex-direction: column;
+    }
+
+    .tab {
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .tab.active {
+      border-bottom-color: var(--color-primary);
+    }
+  }
+</style>

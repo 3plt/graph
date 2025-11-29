@@ -1,0 +1,18 @@
+{
+  "name": "steadyflow-monorepo",
+  "private": true,
+  "scripts": {
+    "build": "pnpm -r build",
+    "build:core": "pnpm --filter steadyflow build",
+    "build:react": "pnpm --filter react-steadyflow build",
+    "build:vue": "pnpm --filter vue-steadyflow build",
+    "build:site": "pnpm --filter demo-site build",
+    "dev:site": "pnpm --filter demo-site dev",
+    "dev:demo": "pnpm --filter demo-react dev",
+    "test": "pnpm -r test",
+    "publish:packages": "pnpm -r publish"
+  },
+  "devDependencies": {
+    "turbo": "^2.6.1"
+  }
+}

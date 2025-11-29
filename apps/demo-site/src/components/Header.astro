@@ -1,0 +1,76 @@
+---
+---
+
+<header>
+  <div class="container">
+    <div class="logo">
+      <span class="logo-icon">⚡</span>
+      <span class="logo-text">SteadyFlow</span>
+    </div>
+    <nav>
+      <a href="#demo">Demo</a>
+      <a href="#installation">Install</a>
+      <a href="https://github.com/3plates/steadyflow" target="_blank" rel="noopener">
+        GitHub
+      </a>
+    </nav>
+  </div>
+</header>
+
+<style>
+  header {
+    background: white;
+    border-bottom: 1px solid var(--color-border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 1rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.25rem;
+    font-weight: 600;
+  }
+
+  .logo-icon {
+    font-size: 1.5rem;
+  }
+
+  nav {
+    display: flex;
+    gap: 2rem;
+  }
+
+  nav a {
+    color: var(--color-text);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s;
+  }
+
+  nav a:hover {
+    color: var(--color-primary);
+  }
+
+  @media (max-width: 768px) {
+    nav {
+      gap: 1rem;
+    }
+
+    nav a {
+      font-size: 0.9rem;
+    }
+  }
+</style>

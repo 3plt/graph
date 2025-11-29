@@ -11,22 +11,22 @@ jobs:
       contents: read
       pages: write
       id-token: write
-    
+
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      
+
       - run: pnpm install
       - run: pnpm build:core
       - run: pnpm build:react
       - run: pnpm build:vue
       - run: pnpm build:site
-      
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: apps/demo-site/dist
-      
+
       - uses: actions/deploy-pages@v4

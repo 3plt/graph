@@ -1,0 +1,17 @@
+# Dependencies
+node_modules
+.pnpm-store
+
+# Build outputs
+dist
+build
+*.tsbuildinfo
+
+# Config files
+*.config.js
+*.config.mjs
+*.config.ts
+
+# Generated files
+.turbo
+.astro

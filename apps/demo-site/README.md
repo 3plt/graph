@@ -56,6 +56,7 @@ demo-site/
 The site is automatically deployed to GitHub Pages on every push to the main branch via GitHub Actions.
 
 The workflow builds:
+
 1. Core library (`steadyflow`)
 2. React wrapper (`react-steadyflow`)
 3. Vue wrapper (`vue-steadyflow`)

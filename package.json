@@ -11,9 +11,20 @@
     "dev:site": "pnpm --filter demo-site dev",
     "dev:demo": "pnpm --filter demo-react dev",
     "test": "pnpm -r test",
+    "test:watch": "pnpm --filter steadyflow test:watch",
+    "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
+    "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx --fix",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
     "publish:packages": "pnpm -r publish"
   },
   "devDependencies": {
-    "turbo": "^2.6.1"
+    "turbo": "^2.6.1",
+    "@typescript-eslint/eslint-plugin": "^8.21.0",
+    "@typescript-eslint/parser": "^8.21.0",
+    "eslint": "^9.18.0",
+    "eslint-plugin-react": "^7.37.3",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "prettier": "^3.4.2"
   }
 }

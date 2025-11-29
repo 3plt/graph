@@ -3,4 +3,4 @@
  */
 
 // Placeholder for Vue integration
-export { Graph, GraphData, LayoutOptions, createGraph } from 'steadyflow';
+export { Graph, GraphData, LayoutOptions, createGraph } from 'steadyflow'

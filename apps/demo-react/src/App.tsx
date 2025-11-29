@@ -1,4 +1,4 @@
-import { createGraph } from 'react-steadyflow';
+import { createGraph } from 'react-steadyflow'
 
 function App() {
   const graph = createGraph({
@@ -11,7 +11,7 @@ function App() {
       { id: 'e1', source: '1', target: '2', label: 'Edge 1-2' },
       { id: 'e2', source: '2', target: '3', label: 'Edge 2-3' },
     ],
-  });
+  })
 
   return (
     <div className="app">
@@ -23,7 +23,7 @@ function App() {
         <p>Graph edges: {graph.getEdges().length}</p>
       </div>
     </div>
-  );
+  )
 }
 
-export default App;
+export default App

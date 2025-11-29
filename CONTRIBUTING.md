@@ -7,6 +7,7 @@ Thank you for your interest in contributing to SteadyFlow! We welcome contributi
 Before we can accept your contribution, you must sign our [Contributor License Agreement (CLA)](./CLA.md). This protects both you and us, and ensures that the project can continue to be developed and distributed.
 
 **Why a CLA?**
+
 - Ensures you have the rights to contribute your code
 - Allows us to maintain the project under GPL-3.0 while also offering commercial licenses
 - Protects the project from legal issues
@@ -61,6 +62,7 @@ git commit -m "feat: add amazing feature"
 ```
 
 We follow [Conventional Commits](https://www.conventionalcommits.org/):
+
 - `feat:` - New features
 - `fix:` - Bug fixes
 - `docs:` - Documentation changes
@@ -76,16 +78,35 @@ git push origin feature/your-feature-name
 ```
 
 Then create a Pull Request on GitHub and:
+
 1. **Sign the CLA** in your PR description (if you haven't already)
 2. Describe your changes
 3. Reference any related issues
 
 ## Code Style
 
-- Use TypeScript for all new code
-- Follow the existing ESLint configuration
+### General Guidelines
+
+- **Use TypeScript** for all new code
+- **No semicolons** - We follow a semicolon-free style (enforced by ESLint/Prettier)
+- **Single quotes** for strings (except to avoid escaping)
+- **2 spaces** for indentation
 - Format code with Prettier (automatic on save)
 - Write meaningful commit messages
+
+### Why No Semicolons?
+
+We've chosen to omit semicolons following the style of projects like Vue.js, Nuxt, and StandardJS. This is a personal preference that's enforced consistently across the codebase via tooling.
+
+**The tooling will handle this for you automatically**, so don't worry about it! Just run:
+
+```bash
+# Format all files
+pnpm format
+
+# Lint and auto-fix
+pnpm lint --fix
+```
 
 ## Project Structure
 

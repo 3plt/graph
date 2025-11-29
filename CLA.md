@@ -35,6 +35,7 @@ For patent claims including, without limitation, method, process, and apparatus 
 As a condition on the grant of rights in Sections 2.1 and 2.2, We agree to license the Contribution only under the terms of the GNU General Public License v3.0 (including any right to adopt any future version of this license if permitted) or any other open source license approved by the Open Source Initiative.
 
 In addition, We may use the following licenses for the Contribution and Material:
+
 - Any proprietary license for commercial purposes, as We are the copyright holder and may dual-license the Material.
 
 #### 2.4 Moral Rights
@@ -104,6 +105,7 @@ GitHub Username: @[username]
 ```
 
 Alternatively, you can:
+
 - Email a signed copy to: [nathan@3plate.com]
 - Sign electronically via our CLA assistant bot (coming soon)
 

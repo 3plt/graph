@@ -6,7 +6,6 @@ Graph library with stable layout and incremental updates
 
 This component is inspired by [IonGraph Web](https://spidermonkey.dev/blog/2025/10/28/iongraph-web.html) from the SpiderMonkey team.
 
-
 ## Features
 
 - Custom node rendering
@@ -76,7 +75,7 @@ steadyflow/
 ├── package.json
 ├── .npmrc
 ├── turbo.json
-└── README.md   
+└── README.md
 ```
 
 ## Installation
@@ -105,27 +104,25 @@ npm install angular-steadyflow
 ### Core (Framework-agnostic)
 
 ```typescript
-import { createGraph } from 'steadyflow';
+import { createGraph } from 'steadyflow'
 
 const graph = createGraph({
   nodes: [
     { id: '1', label: 'Node 1' },
     { id: '2', label: 'Node 2' },
   ],
-  edges: [
-    { id: 'e1', source: '1', target: '2' },
-  ],
-});
+  edges: [{ id: 'e1', source: '1', target: '2' }],
+})
 ```
 
 ### React
 
 ```tsx
-import { GraphView, createGraph } from 'react-steadyflow';
+import { GraphView, createGraph } from 'react-steadyflow'
 
 function App() {
-  const graph = createGraph({ nodes, edges });
-  return <GraphView graph={graph} />;
+  const graph = createGraph({ nodes, edges })
+  return <GraphView graph={graph} />
 }
 ```
 
@@ -133,9 +130,9 @@ function App() {
 
 ```vue
 <script setup>
-import { GraphView, createGraph } from 'vue-steadyflow';
+import { GraphView, createGraph } from 'vue-steadyflow'
 
-const graph = createGraph({ nodes, edges });
+const graph = createGraph({ nodes, edges })
 </script>
 
 <template>

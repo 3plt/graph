@@ -3,4 +3,4 @@
  */
 
 // Placeholder for Angular integration
-export { Graph, GraphData, LayoutOptions, createGraph } from 'steadyflow';
+export { Graph, GraphData, LayoutOptions, createGraph } from 'steadyflow'

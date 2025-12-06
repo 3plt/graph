@@ -29,6 +29,7 @@
     "vitest": "^2.1.8"
   },
   "dependencies": {
-    "immutable": "^5.1.4"
+    "immutable": "^5.1.4",
+    "winston": "^3.18.3"
   }
 }

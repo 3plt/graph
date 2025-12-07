@@ -1,15 +1,21 @@
 {
-  "name": "angular-steadyflow",
+  "name": "@3plate/graph-angular",
   "version": "0.1.0",
   "license": "GPL-3.0",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "peerDependencies": {
     "@angular/core": "^19.0.0 || ^21.0.0"
   },
   "dependencies": {
-    "steadyflow": "workspace:*"
+    "@3plate/graph-core": "workspace:*"
   },
   "scripts": {
     "build": "tsup src/index.ts --format cjs,esm --dts --external @angular/core",

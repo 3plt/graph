@@ -2,7 +2,7 @@
 
 ## Individual Contributor License Agreement
 
-Thank you for your interest in contributing to SteadyFlow ("the Project"), a project owned by 3Plate LLC ("We" or "Us").
+Thank you for your interest in contributing to @3plate/graph ("the Project"), a project owned by 3Plate LLC ("We" or "Us").
 
 This Contributor License Agreement ("Agreement") documents the rights granted by contributors to Us. To make this document effective, please follow the instructions at the bottom.
 

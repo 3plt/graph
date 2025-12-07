@@ -161,6 +161,7 @@ export const GraphEdges = {
     sets = { ...sets, [dir]: set }
     node = { ...node, [type]: sets }
     this.nodes.set(nodeId, node)
+    this._markDirty(nodeId)
   },
 
   /**
@@ -294,7 +295,6 @@ export const GraphEdges = {
    * @returns {Iterator} Iterator over the relationships
    */
   *_rels(nodeId, type = 'both', dir = 'both') {
-    log.debug(`getting rels for ${nodeId} ${type} ${dir}`)
     for (const relId of this._relIds(nodeId, type, dir))
       yield this._getRel(relId)
   },

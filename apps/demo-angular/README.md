@@ -1,3 +1,3 @@
 # demo-angular
 
-Angular demo application for SteadyFlow (to be implemented)
+Angular demo application for @3plate/graph (to be implemented)

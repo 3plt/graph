@@ -1,6 +1,6 @@
-# Contributing to SteadyFlow
+# Contributing to @3plate/graph
 
-Thank you for your interest in contributing to SteadyFlow! We welcome contributions from the community.
+Thank you for your interest in contributing to @3plate/graph! We welcome contributions from the community.
 
 ## Contributor License Agreement
 
@@ -23,8 +23,8 @@ First-time contributors must sign the CLA by following the instructions in [CLA.
 
 ```bash
 # Fork the repository on GitHub, then:
-git clone https://github.com/YOUR_USERNAME/steadyflow.git
-cd steadyflow
+git clone https://github.com/YOUR_USERNAME/3plate-graph.git
+cd 3plate-graph
 ```
 
 ### 3. Set Up Development Environment
@@ -111,7 +111,7 @@ pnpm lint --fix
 ## Project Structure
 
 ```
-steadyflow/
+graph/
 ├── packages/          # Library packages
 │   ├── core/         # Framework-agnostic core
 │   ├── react/        # React wrapper
@@ -169,8 +169,8 @@ pnpm publish:packages
 
 ## License
 
-By contributing to SteadyFlow, you agree that your contributions will be licensed under the GNU General Public License v3.0, with the understanding that 3Plate LLC may also use your contributions in commercial versions of the software as outlined in the CLA.
+By contributing to @3plate/graph, you agree that your contributions will be licensed under the GNU General Public License v3.0, with the understanding that 3Plate LLC may also use your contributions in commercial versions of the software as outlined in the CLA.
 
 ---
 
-Thank you for contributing to SteadyFlow! 🚀
+Thank you for contributing to @3plate/graph! 🚀

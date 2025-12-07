@@ -1,17 +1,17 @@
-# steadyflow
+# @3plate/graph-core
 
 Graph library with stable layout and incremental updates.
 
 ## Installation
 
 ```bash
-npm install steadyflow
+npm install @3plate/graph-core
 ```
 
 ## Usage
 
 ```typescript
-import { createGraph } from 'steadyflow'
+import { createGraph } from '@3plate/graph-core'
 
 const graph = createGraph({
   nodes: [

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { createGraph } from 'vue-steadyflow';
+import { createGraph } from '@3plate/graph-vue';
 import './demo.css';
 
 const graph = createGraph({
@@ -24,7 +24,7 @@ const edgeCount = graph.getEdges().length;
   <div class="demo-wrapper">
     <div class="demo-info">
       <h3>Vue Implementation</h3>
-      <p>Using <code>vue-steadyflow</code> package</p>
+      <p>Using <code>@3plate/graph-vue</code> package</p>
       <div class="stats">
         <div class="stat">
           <span class="stat-label">Nodes:</span>
@@ -79,7 +79,7 @@ const edgeCount = graph.getEdges().length;
     <div class="code-example">
       <h4>Usage Example</h4>
       <pre><code>&lt;script setup&gt;
-import { GraphView, createGraph } from 'vue-steadyflow';
+import { GraphView, createGraph } from '@3plate/graph-vue';
 
 const graph = createGraph({
   nodes: [

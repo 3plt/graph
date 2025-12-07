@@ -1,6 +1,5 @@
 /**
- * Vue SteadyFlow - Vue components for SteadyFlow graph visualization
+ * @3plate/graph-vue - Vue components for @3plate/graph graph visualization
  */
 
 // Placeholder for Vue integration
-export { Graph, GraphData, LayoutOptions, createGraph } from 'steadyflow'

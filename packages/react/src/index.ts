@@ -1,22 +1,19 @@
 /**
- * React SteadyFlow - React components for SteadyFlow graph visualization
+ * @3plate/graph-react - React components for @3plate/graph graph visualization
  */
 
-import { Graph, GraphData, LayoutOptions } from 'steadyflow'
+import type { Graph } from '@3plate/graph-core'
 
 export interface GraphViewProps {
-  graph: Graph
+  graph: Graph<any, any>
   width?: number
   height?: number
-  layoutOptions?: LayoutOptions
   onNodeClick?: (nodeId: string) => void
   onEdgeClick?: (edgeId: string) => void
 }
 
 // Placeholder - will be implemented with actual React component
-export function GraphView(props: GraphViewProps): null {
-  // TODO: Implement React component
+export function GraphView(props: GraphViewProps) {
+  // Placeholder component
   return null
 }
-
-export { Graph, GraphData, LayoutOptions, createGraph } from 'steadyflow'

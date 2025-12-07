@@ -1,6 +1,6 @@
 # demo-site
 
-Unified documentation and demo site for SteadyFlow, showcasing all framework integrations.
+Unified documentation and demo site for @3plate/graph, showcasing all framework integrations.
 
 ## Tech Stack
 
@@ -57,9 +57,10 @@ The site is automatically deployed to GitHub Pages on every push to the main bra
 
 The workflow builds:
 
-1. Core library (`steadyflow`)
-2. React wrapper (`react-steadyflow`)
-3. Vue wrapper (`vue-steadyflow`)
+1. Core library (`@3plate/graph-core`)
+2. React wrapper (`@3plate/graph-react`)
+3. Vue wrapper (`@3plate/graph-vue`)
+4. Angular wrapper (`@3plate/graph-angular`)
 4. Demo site (`demo-site`)
 
-And deploys the built site to `https://3plates.github.io/steadyflow`
+And deploys the built site to `https://3plt.github.io/graph`

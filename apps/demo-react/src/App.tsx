@@ -1,4 +1,4 @@
-import { createGraph } from 'react-steadyflow'
+import { createGraph } from '@3plate/graph-core'
 
 function App() {
   const graph = createGraph({
@@ -15,7 +15,7 @@ function App() {
 
   return (
     <div className="app">
-      <h1>SteadyFlow Demo</h1>
+      <h1>@3plate/graph Demo</h1>
       <p>Graph library with stable layout and incremental updates</p>
       <div className="graph-container">
         {/* GraphView component will be implemented here */}

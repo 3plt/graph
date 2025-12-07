@@ -1,30 +1,59 @@
 {
-  "name": "steadyflow-monorepo",
-  "private": true,
+  "name": "@3plate/graph",
+  "version": "0.1.0",
+  "description": "Graph library with stable layout and incremental updates",
+  "type": "module",
+  "license": "GPL-3.0",
   "packageManager": "pnpm@10.11.0",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@3plate/graph-angular": "workspace:*",
+    "@3plate/graph-core": "workspace:*",
+    "@3plate/graph-react": "workspace:*",
+    "@3plate/graph-vue": "workspace:*"
+  },
   "scripts": {
-    "build": "pnpm -r build",
-    "build:core": "pnpm --filter steadyflow build",
-    "build:react": "pnpm --filter react-steadyflow build",
-    "build:vue": "pnpm --filter vue-steadyflow build",
+    "build": "pnpm --filter './packages/*' build && pnpm build:self",
+    "build:self": "tsup src/index.ts --format cjs,esm",
+    "build:core": "pnpm --filter @3plate/graph-core build",
+    "build:react": "pnpm --filter @3plate/graph-react build",
+    "build:vue": "pnpm --filter @3plate/graph-vue build",
     "build:site": "pnpm --filter demo-site build",
     "dev:site": "pnpm --filter demo-site dev",
     "dev:demo": "pnpm --filter demo-react dev",
     "test": "pnpm -r test",
-    "test:watch": "pnpm --filter steadyflow test:watch",
+    "test:watch": "pnpm --filter @3plate/graph-core test:watch",
     "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
     "lint:fix": "eslint . --ext .ts,.tsx,.js,.jsx --fix",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
-    "publish:packages": "pnpm -r publish"
+    "changeset": "changeset",
+    "version": "changeset version",
+    "publish:packages": "changeset publish"
   },
   "devDependencies": {
-    "turbo": "^2.6.1",
+    "@changesets/cli": "^2.29.8",
     "@typescript-eslint/eslint-plugin": "^8.21.0",
     "@typescript-eslint/parser": "^8.21.0",
     "eslint": "^9.18.0",
     "eslint-plugin-react": "^7.37.3",
     "eslint-plugin-react-hooks": "^5.1.0",
-    "prettier": "^3.4.2"
+    "prettier": "^3.4.2",
+    "tsup": "^8.5.1",
+    "turbo": "^2.6.1",
+    "typescript": "^5.9.3"
   }
 }

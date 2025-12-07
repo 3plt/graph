@@ -73,3 +73,32 @@ export function expectSegs(graph, segs) {
     'segments mismatch'
   ).toEqual([...segSet].sort())
 }
+
+export function expectIndexes(graph, expected) {
+  const actual = []
+  const dummyMap = new Map()
+  for (const layerId of graph.layerList) {
+    const layer = graph.getLayer(layerId)
+    actual.push(layer.sorted)
+    if (layer.index >= expected.length) continue
+    const list = expected[layer.index]
+    for (const i in layer.sorted) {
+      if (i >= list.length) break
+      const nodeId = layer.sorted[i]
+      if (!graph._isDummyId(nodeId)) continue
+      if (!list[i].match(/^d\d+$/)) continue
+      const dummy = dummyMap.get(list[i]) ?? nodeId
+      dummyMap.set(list[i], dummy)
+      list[i] = dummy
+    }
+  }
+  expect(actual, 'layers mismatch').toEqual(expected)
+}
+
+export function expectLayerPositions(graph, expected) {
+  const actual = {}
+  for (const node of graph.nodes.values()) {
+    actual[node.id] = node.lpos
+  }
+  expect(actual, 'layer positions mismatch').toMatchObject(expected)
+}

@@ -1,4 +1,4 @@
-import { createGraph } from 'react-steadyflow'
+import { createGraph } from '@3plate/graph-react'
 import './demo.css'
 
 export default function ReactDemo() {
@@ -21,7 +21,7 @@ export default function ReactDemo() {
       <div className="demo-info">
         <h3>React Implementation</h3>
         <p>
-          Using <code>react-steadyflow</code> package
+          Using <code>@3plate/graph-react</code> package
         </p>
         <div className="stats">
           <div className="stat">
@@ -153,7 +153,7 @@ export default function ReactDemo() {
       <div className="code-example">
         <h4>Usage Example</h4>
         <pre>
-          <code>{`import { GraphView, createGraph } from 'react-steadyflow';
+          <code>{`import { GraphView, createGraph } from '@3plate/graph-react';
 
 const graph = createGraph({
   nodes: [

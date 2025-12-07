@@ -13,20 +13,6 @@ export const GraphLayers = {
     return this.getLayer(this.getNode(nodeId).layerId).index
   },
 
-  /**
-   * Modify a layer by adding or removing a node.
-   * 
-   * @param {string} layerId - Layer ID
-   * @param {string} nodeId - Node ID
-   * @param {string} op - Operation (add or delete)
-   */
-  _layerModNode(layerId, nodeId, op) {
-    const layer = this.getLayer(layerId)
-    this.layers.set(layerId, {
-      ...layer,
-      nodes: layer.nodes[op](nodeId)
-    })
-  },
 
   /**
    * Add a node to a layer.
@@ -35,7 +21,11 @@ export const GraphLayers = {
    * @param {string} nodeId - Node ID
    */
   _layerAddNode(layerId, nodeId) {
-    this._layerModNode(layerId, nodeId, 'add')
+    const layer = this.getLayer(layerId)
+    this.layers.set(layerId, {
+      ...layer,
+      nodes: layer.nodes.add(nodeId)
+    })
   },
 
   /**
@@ -45,7 +35,23 @@ export const GraphLayers = {
    * @param {string} nodeId - Node ID
    */
   _layerDeleteNode(layerId, nodeId) {
-    this._layerModNode(layerId, nodeId, 'delete')
+    const layer = this.getLayer(layerId)
+    let sorted = layer.sorted
+    if (sorted) {
+      const idx = sorted.findIndex(id => id == nodeId)
+      if (idx >= 0) {
+        sorted = sorted.filter(id => id != nodeId)
+        for (let i = idx; i < sorted.length; i++) {
+          const node = this.getNode(sorted[i])
+          this.nodes.set(sorted[i], { ...node, index: i })
+        }
+      }
+    }
+    this.layers.set(layerId, {
+      ...layer,
+      nodes: layer.nodes.delete(nodeId),
+      sorted,
+    })
     if (this._layerIsEmpty(layerId))
       this._deleteLayer(layerId)
   },
@@ -63,7 +69,12 @@ export const GraphLayers = {
   _updateLayers() {
     // phase 1: DFS to fix child layers based on parents
     // visit at least each dirty node
-    const stack = [...this._dirtyNodes]
+    const stack = [...this._dirtyNodes].filter(id => {
+      const node = this.nodes.get(id)
+      if (!node || node.isDummy) return false
+      return true
+    })
+    stack.sort((a, b) => this._nodeLayerIndex(b) - this._nodeLayerIndex(a))
     const phase2 = new Set(stack)
     const moved = new Set()
     while (stack.length > 0) {
@@ -175,6 +186,7 @@ export const GraphLayers = {
       nodes: ISet()
     })
     this.layerList.push(id)
+    this.dirtyLayers.add(id)
   },
 
   /**

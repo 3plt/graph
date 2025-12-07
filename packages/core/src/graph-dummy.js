@@ -111,8 +111,7 @@ export const GraphDummy = {
       for (const [key, group] of groups) {
         if (group.size == 1) continue
         const edgeIds = [...group].map(node => node.edgeId)
-        const dummy = this._addDummy({ edgeIds, merged: true })
-        this._layerAddNode(layerId, dummy.id)
+        const dummy = this._addDummy({ edgeIds, layerId, merged: true })
         let seg
         for (const old of group) {
           for (const segId of this._relIds(old.id, 'segs', dir)) {
@@ -137,7 +136,6 @@ export const GraphDummy = {
             })
             this._edgeReplaceSeg(old.edgeId, segId, seg.id)
           }
-          this._deleteNode(old.id)
         }
       }
     }

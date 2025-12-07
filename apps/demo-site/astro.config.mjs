@@ -8,6 +8,6 @@ export default defineConfig({
     react(),
     vue(),
   ],
-  site: 'https://3plates.github.io',
-  base: '/steadyflow',
+  site: 'https://3plt.github.io',
+  base: '/graph',
 });

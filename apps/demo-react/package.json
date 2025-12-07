@@ -9,7 +9,8 @@
   "dependencies": {
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "react-steadyflow": "workspace:*"
+    "@3plate/graph-core": "workspace:*",
+    "@3plate/graph-react": "workspace:*"
   },
   "devDependencies": {
     "@types/react": "^19.2.7",

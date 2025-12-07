@@ -1,4 +1,4 @@
-# steadyflow
+# @3plate/graph
 
 Graph library with stable layout and incremental updates
 
@@ -28,12 +28,12 @@ This component is inspired by [IonGraph Web](https://spidermonkey.dev/blog/2025/
 
 ## Project Structure
 
-`steadyflow` can be used as a library with no framework dependencies, or you can use the
-components in `steadyflow-react`, `steadyflow-vue`, or `steadyflow-angular` which wrap
+`@3plate/graph` can be used as a library with no framework dependencies, or you can use the
+components in `@3plate/graph-react`, `@3plate/graph-vue`, or `@3plate/graph-angular` which wrap
 the core library.
 
 ```
-steadyflow/
+graph/
 ├── packages/
 │   ├── core/
 │   │   ├── src/
@@ -83,62 +83,35 @@ steadyflow/
 ### Core Library
 
 ```bash
-npm install steadyflow
+npm install @3plate/graph-core
 ```
 
 ### Framework Wrappers
 
 ```bash
 # React
-npm install react-steadyflow
+npm install @3plate/graph-react
 
 # Vue
-npm install vue-steadyflow
+npm install @3plate/graph-vue
 
 # Angular
-npm install angular-steadyflow
+npm install @3plate/graph-angular
 ```
 
 ## Usage
 
 ### Core (Framework-agnostic)
 
-```typescript
-import { createGraph } from 'steadyflow'
-
-const graph = createGraph({
-  nodes: [
-    { id: '1', label: 'Node 1' },
-    { id: '2', label: 'Node 2' },
-  ],
-  edges: [{ id: 'e1', source: '1', target: '2' }],
-})
-```
+TODO
 
 ### React
 
-```tsx
-import { GraphView, createGraph } from 'react-steadyflow'
-
-function App() {
-  const graph = createGraph({ nodes, edges })
-  return <GraphView graph={graph} />
-}
-```
+TODO
 
 ### Vue
 
-```vue
-<script setup>
-import { GraphView, createGraph } from 'vue-steadyflow'
-
-const graph = createGraph({ nodes, edges })
-</script>
-
-<template>
-  <GraphView :graph="graph" />
-</template>
-```
+TODO
 
 ## Development
 
@@ -172,16 +145,16 @@ This project is licensed under the **GNU General Public License v3.0** - see the
 
 ### Why GPL?
 
-We've chosen GPL-3.0 to ensure that improvements to SteadyFlow remain open source and benefit the entire community. This means:
+We've chosen GPL-3.0 to ensure that improvements to @3plate/graph remain open source and benefit the entire community. This means:
 
-- ✅ You can use SteadyFlow in open source projects
-- ✅ You can modify and distribute SteadyFlow
+- ✅ You can use @3plate/graph in open source projects
+- ✅ You can modify and distribute @3plate/graph
 - ✅ Commercial use is allowed
 - ⚠️ If you distribute modified versions, you must also make your changes available under GPL-3.0
 
 ### Commercial Licensing
 
-If you need to use SteadyFlow in a proprietary/closed-source application without GPL restrictions, commercial licenses are available. Contact us at [nathan@3plate.com] for more information.
+If you need to use @3plate/graph in a proprietary/closed-source application without GPL restrictions, commercial licenses are available. Contact us at [nathan@3plate.com] for more information.
 
 ### Copyright
 
@@ -189,4 +162,4 @@ Copyright (c) 2025 3Plate LLC
 
 ---
 
-Made with ⚡ by [3Plate LLC](http://3plate.com/)
+Made with ⚡ by [3Plate LLC](https://www.3plate.com/)

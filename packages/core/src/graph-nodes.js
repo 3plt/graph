@@ -22,11 +22,13 @@ export const GraphNodes = {
       ...props,
       edges: { in: ISet(), out: ISet() },
       segs: { in: ISet(), out: ISet() },
+      aligned: {},
     }
     if (!node.layerId)
       node.layerId = this._layerAtIndex(0).id
     this._layerAddNode(node.layerId, node.id)
     this.nodes.set(node.id, node)
+    this._markDirty(node.id)
     return node
   },
 
@@ -42,6 +44,10 @@ export const GraphNodes = {
       ...props,
       id: this._newDummyId(),
       isDummy: true,
+      dims: {
+        width: this.options.dummyNodeSize,
+        height: this.options.dummyNodeSize,
+      }
     })
   },
 

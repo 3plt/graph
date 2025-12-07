@@ -1,17 +1,17 @@
-# react-steadyflow
+# @3plate/graph-react
 
-React components for SteadyFlow graph visualization.
+React components for @3plate/graph visualization.
 
 ## Installation
 
 ```bash
-npm install react-steadyflow
+npm install @3plate/graph-react
 ```
 
 ## Usage
 
 ```tsx
-import { GraphView, createGraph } from 'react-steadyflow'
+import { GraphView, createGraph } from '@3plate/graph-react'
 
 function App() {
   const graph = createGraph({

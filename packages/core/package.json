@@ -1,22 +1,22 @@
 {
-  "name": "steadyflow",
+  "name": "@3plate/graph-core",
   "version": "0.1.0",
   "type": "module",
   "license": "GPL-3.0",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
-  "types": "./types/steadyflow.d.ts",
   "exports": {
     ".": {
       "import": "./dist/index.mjs",
-      "require": "./dist/index.js",
-      "types": "./types/steadyflow.d.ts"
+      "require": "./dist/index.js"
     }
   },
   "files": [
-    "dist",
-    "types"
+    "dist"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsup src/index.js --format cjs,esm",
     "dev": "tsup src/index.js --format cjs,esm --watch",
@@ -30,6 +30,7 @@
   },
   "dependencies": {
     "immutable": "^5.1.4",
-    "winston": "^3.18.3"
+    "winston": "^3.18.3",
+    "winston-transport": "^4.9.0"
   }
 }

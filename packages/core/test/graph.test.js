@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { Graph } from '../src/index.js'
-import { Set as ISet } from 'immutable'
-import { expectSegs } from './utils.js'
+import { expectSegs, expectIndexes, expectLayerPositions } from './utils.js'
 
 describe('Graph', () => {
   describe('Construction', () => {
@@ -750,6 +749,50 @@ describe('Graph', () => {
           'b--n3': 'b-n3',
           'b--n4': 'b-n4',
         })
+      })
+    })
+  })
+
+  describe('Initial position', () => {
+    let g1
+    beforeEach(() => {
+      g1 = new Graph({
+        nodes: [
+          { id: 'n1', dims: { width: 20 } },
+          { id: 'n2', dims: { width: 30 } },
+          { id: 'n3', dims: { width: 40 } },
+          { id: 'n4', dims: { width: 50 } },
+          { id: 'b', dims: { width: 60 } },
+        ],
+        edges: [
+          { source: { id: 'n1' }, target: { id: 'n3' } },
+          { source: { id: 'n1' }, target: { id: 'n4' } },
+          { source: { id: 'n2' }, target: { id: 'n3' } },
+          { source: { id: 'n2' }, target: { id: 'n4' } },
+          { source: { id: 'n1' }, target: { id: 'b' } },
+          { source: { id: 'n2' }, target: { id: 'b' } },
+          { source: { id: 'b' }, target: { id: 'n3' } },
+          { source: { id: 'b' }, target: { id: 'n4' } },
+        ],
+        options: {
+          mergeOrder: ['target'],
+          dummyNodeSize: 10,
+          nodeMargin: 10,
+          layoutSteps: [],
+        }
+      })
+    })
+
+    it('should blah blah', () => {
+      expectIndexes(g1, [
+        ['n1', 'n2'],
+        ['d1', 'd2', 'b'],
+        ['n3', 'n4'],
+      ])
+      expectLayerPositions(g1, {
+        n1: 0, n2: 30,
+        b: 40,
+        n3: 0, n4: 50,
       })
     })
   })

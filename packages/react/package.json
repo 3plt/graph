@@ -1,16 +1,22 @@
 {
-  "name": "react-steadyflow",
+  "name": "@3plate/graph-react",
   "version": "0.1.0",
   "license": "GPL-3.0",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",
     "react-dom": "^18.0.0 || ^19.0.0"
   },
   "dependencies": {
-    "steadyflow": "workspace:*"
+    "@3plate/graph-core": "workspace:*"
   },
   "scripts": {
     "build": "tsup src/index.ts --format cjs,esm --dts --external react --external react-dom",

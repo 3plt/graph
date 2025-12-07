@@ -1,7 +1,9 @@
 import winston, { loggers } from 'winston'
+import { VitestTransport } from './vitest-transport.js'
 const { combine, timestamp, printf, colorize, align } = winston.format
 
 let format
+let transports
 
 switch (process.env.NODE_ENV) {
   case 'development':
@@ -11,6 +13,10 @@ switch (process.env.NODE_ENV) {
       align(),
       printf((info) => `${info.level}: ${info.module ?? 'core'}: ${info.message}`)
     )
+    // Use VitestTransport in test mode for proper output association
+    transports = process.env.VITEST
+      ? [new VitestTransport()]
+      : [new winston.transports.Console()]
     break
   default:
     format = combine(
@@ -19,13 +25,14 @@ switch (process.env.NODE_ENV) {
       }),
       json()
     )
+    transports = [new winston.transports.Console()]
     break
 }
 
 export const log = winston.createLogger({
   level: process.env.LOG_LEVEL || 'warn',
   format,
-  transports: [new winston.transports.Console()],
+  transports,
 })
 
 export function logger(module) {

@@ -1,3 +1,3 @@
 # demo-vue
 
-Vue demo application for SteadyFlow (to be implemented)
+Vue demo application for @3plate/graph (to be implemented)

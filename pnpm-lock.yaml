@@ -54,9 +54,12 @@ importers:
 
   apps/demo-react:
     dependencies:
-      '@3plate/graph':
+      '@3plate/graph-core':
         specifier: workspace:*
-        version: link:../..
+        version: link:../../packages/core
+      '@3plate/graph-react':
+        specifier: workspace:*
+        version: link:../../packages/react
       react:
         specifier: ^19.2.0
         version: 19.2.1

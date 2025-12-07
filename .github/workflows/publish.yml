@@ -1,0 +1,42 @@
+name: Publish to npm
+
+on:
+  push:
+    tags:
+      - '@3plate/graph-core@*'
+      - '@3plate/graph-react@*'
+      - '@3plate/graph-vue@*'
+      - '@3plate/graph-angular@*'
+      - '@3plate/graph@*'
+
+permissions:
+  id-token: write  # Required for OIDC/trusted publishing
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+      
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      
+      # Ensure npm 11.5.1+ for trusted publishing support
+      - name: Update npm
+        run: npm install -g npm@latest
+      
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      
+      - name: Build packages
+        run: pnpm build
+      
+      - name: Publish to npm
+        run: pnpm publish:packages

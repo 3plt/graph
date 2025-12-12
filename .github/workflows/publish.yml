@@ -1,6 +1,7 @@
 name: Publish to npm
 
 on:
+  workflow_dispatch:
   push:
     tags:
       - '**'
@@ -8,6 +9,10 @@ on:
 permissions:
   id-token: write  # Required for OIDC/trusted publishing
   contents: read
+
+concurrency:
+  group: publish
+  cancel-in-progress: true
 
 jobs:
   publish:

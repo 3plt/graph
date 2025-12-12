@@ -1,4 +1,5 @@
 import { defineConfig } from 'tsup'
+import path from 'path'
 
 export default defineConfig({
   entry: ['src/index.ts'],
@@ -11,11 +12,12 @@ export default defineConfig({
     {
       name: 'css-raw-resolver',
       setup(build) {
-        // Handle .css?raw imports by stripping the ?raw suffix
+        // Handle .css?raw imports by stripping the ?raw suffix and resolving to absolute path
         build.onResolve({ filter: /\.css\?raw$/ }, (args) => {
+          const cssPath = args.path.replace('?raw', '')
+          const absolutePath = path.resolve(args.resolveDir, cssPath)
           return {
-            path: args.path.replace('?raw', ''),
-            pluginData: { raw: true },
+            path: absolutePath,
             namespace: 'file',
           }
         })

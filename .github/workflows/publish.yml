@@ -3,11 +3,7 @@ name: Publish to npm
 on:
   push:
     tags:
-      - '@3plate/graph-core@*'
-      - '@3plate/graph-react@*'
-      - '@3plate/graph-vue@*'
-      - '@3plate/graph-angular@*'
-      - '@3plate/graph@*'
+      - '**'
 
 permissions:
   id-token: write  # Required for OIDC/trusted publishing

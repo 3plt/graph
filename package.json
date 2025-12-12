@@ -1,9 +1,13 @@
 {
   "name": "@3plate/graph",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Graph library with stable layout and incremental updates",
   "type": "module",
   "license": "GPL-3.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/3plt/graph"
+  },
   "packageManager": "pnpm@10.11.0",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

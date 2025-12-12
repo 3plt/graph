@@ -1,7 +1,12 @@
 {
   "name": "@3plate/graph-vue",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "license": "GPL-3.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/3plt/graph",
+    "directory": "packages/vue"
+  },
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",

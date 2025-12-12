@@ -1,5 +1,11 @@
 # @3plate/graph-core
 
+## 0.1.2
+
+### Patch Changes
+
+- Fix NPM build issues
+
 ## 0.1.1
 
 ### Patch Changes

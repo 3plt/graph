@@ -1,0 +1,328 @@
+import { logger } from '../../log'
+import { Seq } from 'immutable'
+import { Node, NodeId } from '../types/node'
+import { Graph } from '../types/graph'
+import { Dir, Side, Pos } from '../types/enums'
+import { LayerId } from '../types/layer'
+import { Seg } from '../types/seg'
+import { PortId } from '../types/port'
+
+const log = logger('layout')
+
+export type LayoutStep = 'alignChildren' | 'alignParents' | 'compact'
+
+export class Layout {
+  static parentIndex(g: Graph, node: Node): number {
+    const parents = Seq([...node.adjs(g, 'segs', 'in')])
+    console.log(`parents of ${node.id}:`, [...parents], [...parents.map(p => p.index)])
+    const pidx = parents.map(p => p.index).min()
+    log.debug(`node ${node.id}: parent index ${pidx}`)
+    if (pidx !== undefined) return pidx
+    return node.isDummy ? -Infinity : Infinity
+  }
+
+  static compareNodes(g: Graph, aId: NodeId, bId: NodeId, pidxs: Map<NodeId, number>): number {
+    const ai = pidxs.get(aId)!
+    const bi = pidxs.get(bId)!
+    if (ai !== bi) return ai - bi
+    const a = g.getNode(aId)
+    const b = g.getNode(bId)
+    if (a.isDummy && !b.isDummy) return -1
+    if (!a.isDummy && b.isDummy) return 1
+    if (!a.isDummy) return a.id.localeCompare(b.id)
+    const minA = a.edgeId ?? Seq(a.edgeIds).min()
+    const minB = b.edgeId ?? Seq(b.edgeIds).min()
+    return minA.localeCompare(minB)
+  }
+
+  static positionNodes(g: Graph) {
+    console.log('positionNodes', g.dirtyNodes)
+    for (const nodeId of g.dirtyNodes)
+      g.dirtyLayers.add(g.getNode(nodeId).layerId)
+    let adjustNext = false
+    for (const layerId of g.layerList) {
+      if (!adjustNext && !g.dirtyLayers.has(layerId)) continue
+      adjustNext = false
+      let layer = g.getLayer(layerId)
+      console.log(`positioning layer ${layerId} at ${layer.index}`)
+      const pidxs: Map<NodeId, number> = new Map()
+      for (const nodeId of layer.nodeIds)
+        pidxs.set(nodeId, Layout.parentIndex(g, g.getNode(nodeId)))
+      console.log('pidxs', pidxs)
+      const sorted = [...layer.nodeIds].sort(
+        (aId, bId) => Layout.compareNodes(g, aId, bId, pidxs))
+      console.log(`sorted:`, sorted)
+      if (layer.hasSortOrder(sorted)) continue
+      g.dirtyLayers.add(layerId)
+      layer = layer.setSorted(g, sorted)
+      adjustNext = true
+      let lpos = 0
+      for (let i = 0; i < sorted.length; i++) {
+        let node = g.getNode(sorted[i])
+        log.debug(`node ${node.id}: final index ${i}`)
+        node = node.setIndex(g, i).setLayerPos(g, lpos)
+        const size = node.dims?.[g.w] ?? 0
+        lpos += size + g.options.nodeMargin
+      }
+    }
+  }
+
+  static alignAll(g: Graph) {
+    if (g.options.layoutSteps) {
+      for (const step of g.options.layoutSteps)
+        Layout[step](g)
+    } else {
+      for (let i = 0; i < g.options.alignIterations; i++) {
+        let anyChanged =
+          Layout.alignChildren(g) ||
+          Layout.alignParents(g) ||
+          Layout.compact(g)
+        if (!anyChanged) break
+      }
+    }
+  }
+
+  static alignChildren(g: Graph) {
+    return Layout.alignNodes(g, false, false, false, 'in', false)
+  }
+
+  static alignParents(g: Graph) {
+    return Layout.alignNodes(g, true, true, false, 'out', true)
+  }
+
+  static alignNodes(
+    g: Graph,
+    reverseLayers: boolean,
+    reverseNodes: boolean,
+    reverseMove: boolean,
+    dir: Dir,
+    conservative: boolean
+  ) {
+    let layerIds = [...g.layerList]
+    let anyChanged = false
+    if (reverseLayers) layerIds.reverse()
+    let adjustNext = false
+    for (const layerId of layerIds) {
+      if (!adjustNext && !g.dirtyLayers.has(layerId)) continue
+      adjustNext = false
+      while (true) {
+        let changed = false
+        const nodeIds = Layout.sortLayer(g, layerId, reverseNodes)
+        for (const nodeId of nodeIds) {
+          const {
+            isAligned,
+            pos: newPos,
+            nodeId: otherId
+          } = Layout.nearestNode(g, nodeId, dir, reverseMove, !reverseMove)
+          if (isAligned || (newPos === undefined)) continue
+          if (Layout.shiftNode(g, nodeId, otherId, dir, newPos, reverseMove, conservative)) {
+            changed = true
+            anyChanged = true
+            break
+          }
+        }
+        if (!changed) break
+        g.dirtyLayers.add(layerId)
+        adjustNext = true
+      }
+    }
+    return anyChanged
+  }
+
+  static sortLayer(g: Graph, layerId: LayerId, reverseNodes: boolean) {
+    const layer = g.getLayer(layerId)
+    const sorted = [...layer.nodeIds]
+    sorted.sort((a, b) => g.getNode(a).lpos! - g.getNode(b).lpos!)
+    layer.setSorted(g, sorted)
+    if (reverseNodes)
+      return sorted.toReversed()
+    return sorted
+  }
+
+  static nearestNode(g: Graph, nodeId: NodeId, dir: Dir, allowLeft: boolean, allowRight: boolean) {
+    const node = g.getNode(nodeId)
+    let minDist = Infinity
+    let bestPos, bestNodeId
+    const mySide = dir == 'in' ? 'target' : 'source'
+    const altSide = dir == 'in' ? 'source' : 'target'
+    for (const seg of node.rels(g, 'segs', dir)) {
+      const altId = seg[altSide].id
+      const myPos = Layout.anchorPos(g, seg, mySide)[g.x]
+      const altPos = Layout.anchorPos(g, seg, altSide)[g.x]
+      const diff = altPos - myPos
+      if (diff == 0) return { nodeId: altId, isAligned: true }
+      if ((diff < 0) && !allowLeft) continue
+      if ((diff > 0) && !allowRight) continue
+      const dist = Math.abs(diff)
+      if (dist < minDist) {
+        minDist = dist
+        bestNodeId = altId
+        bestPos = node.lpos! + diff
+      }
+    }
+    return { nodeId: bestNodeId, pos: bestPos, isAligned: false }
+  }
+
+  static anchorPos(g: Graph, seg: Seg, side: Side): Pos {
+    const nodeId = seg[side].id
+    const node = g.getNode(nodeId)
+    let p: Pos = { x: 0, y: 0, [g.x]: node.lpos!, ...(node.pos || {}) }
+    let w = node.dims?.[g.w] ?? 0
+    let h = node.dims?.[g.h] ?? 0
+
+    if (node.isDummy)
+      return {
+        [g.x]: p[g.x] + w / 2,
+        [g.y]: p[g.y] + h / 2,
+      } as Pos
+
+    p[g.x] += Layout.nodePortOffset(g, nodeId, seg[side].port)
+    if ((side == 'source') == g.r)
+      p[g.y] += h
+
+    return p
+  }
+
+  static nodePortOffset(g: Graph, nodeId: NodeId, port?: PortId) {
+    if (!port) return g.options.defaultPortOffset
+    // TODO: figure out how user passes in port positions
+    return g.options.defaultPortOffset
+  }
+
+  static shiftNode(
+    g: Graph,
+    nodeId: NodeId,
+    alignId: NodeId | undefined,
+    dir: Dir,
+    lpos: number,
+    reverseMove: boolean,
+    conservative: boolean
+  ) {
+    const node = g.getNode(nodeId)
+    if (!conservative)
+      Layout.markAligned(g, nodeId, alignId, dir, lpos)
+    const space = g.options.nodeMargin
+    const nodeWidth = node.dims?.[g.w] ?? 0
+    const aMin = lpos - space, aMax = lpos + nodeWidth + space
+    repeat:
+    for (const otherId of node.getLayer(g).nodeIds) {
+      if (otherId == nodeId) continue
+      const other = g.getNode(otherId)
+      const opos = other.lpos!
+      const otherWidth = other.dims?.[g.w] ?? 0
+      const bMin = opos, bMax = opos + otherWidth
+      if (aMin < bMax && bMin < aMax) {
+        if (conservative) return false
+        const safePos = reverseMove ? aMin - otherWidth : aMax
+        Layout.shiftNode(g, otherId, undefined, dir, safePos, reverseMove, conservative)
+        continue repeat
+      }
+    }
+    if (conservative)
+      Layout.markAligned(g, nodeId, alignId, dir, lpos)
+    return true
+  }
+
+  static markAligned(g: Graph, nodeId: NodeId, otherId: NodeId | undefined, dir: Dir, lpos: number) {
+    const node = g.getNode(nodeId)
+    const alt = dir == 'in' ? 'out' : 'in'
+    if (node.aligned[dir])
+      g.getNode(node.aligned[dir]).setAligned(g, alt, undefined)
+    if (otherId)
+      g.getNode(otherId).setAligned(g, alt, nodeId)
+    node.setAligned(g, dir, otherId)
+  }
+
+  static *aligned(g: Graph, nodeId: NodeId, dir: Dir | 'both') {
+    const visit = function* (node: Node, dir: Dir): Generator<Node> {
+      const otherId = node.aligned[dir]
+      if (!otherId) return
+      const other = g.getNode(otherId)
+      yield other
+      yield* visit(other, dir)
+    }
+    const node = g.getNode(nodeId)
+    yield node
+    if (dir == 'both') {
+      yield* visit(node, 'in')
+      yield* visit(node, 'out')
+    } else {
+      yield* visit(node, dir)
+    }
+  }
+
+  static leftOf(g: Graph, node: Node): NodeId | null {
+    if (node.index == 0) return null
+    return node.getLayer(g).sorted[node.index! - 1]
+  }
+
+  static rightOf(g: Graph, node: Node): NodeId | null {
+    const layer = node.getLayer(g)
+    if (node.index == layer.sorted.length - 1) return null
+    return layer.sorted[node.index! + 1]
+  }
+
+  static compact(g: Graph) {
+    let anyChanged = false
+    for (const layerId of g.layerList) {
+      const layer = g.getLayer(layerId)
+      if (layer.sorted.length < 2) continue
+      for (const nodeId of layer.sorted) {
+        const node = g.getNode(nodeId)
+        if (node.index == 0) continue
+        let minGap = Infinity
+        const stack = []
+        for (const right of Layout.aligned(g, nodeId, 'both')) {
+          stack.push(right)
+          const leftId = Layout.leftOf(g, right)
+          if (!leftId) return
+          const left = g.getNode(leftId)
+          const leftWidth = left.dims?.[g.w] ?? 0
+          const gap = right.lpos! - left.lpos! - leftWidth
+          if (gap < minGap) minGap = gap
+        }
+        const delta = minGap - g.options.nodeMargin
+        if (delta <= 0) continue
+        anyChanged = true
+        for (const right of stack)
+          right.setLayerPos(g, right.lpos! - delta)
+      }
+    }
+    return anyChanged
+  }
+
+  static getCoords(g: Graph) {
+    let pos = 0
+    const dir = g.r ? -1 : 1
+    const trackSep = Math.max(
+      g.options.layerMargin,
+      g.options.edgeSpacing,
+      g.options.turnRadius
+    )
+    for (const layerId of g.layerList) {
+      let layer = g.getLayer(layerId)
+      let height: number
+      console.log(`getCoords: layer = ${layerId} at ${layer.index}`)
+      if (g.dirtyLayers.has(layerId)) {
+        height = Seq(layer.nodes(g)).map(node => node.dims?.[g.h] ?? 0).max() ?? 0
+        layer = layer.setSize(g, height)
+      } else height = layer.size
+      console.log(`getCoords: layer = ${layerId}: pos = ${pos}, height = ${height}`)
+      for (const node of layer.nodes(g)) {
+        if (!g.dirtyNodes.has(node.id) && pos == layer.pos) continue
+        const npos: Pos = { [g.x]: node.lpos!, [g.y]: pos } as Pos
+        if (!g.n) npos[g.y] += dir * height
+        if (g.r == g.n) npos[g.y] -= node.dims?.[g.h] ?? 0
+        console.log(`getCoords: node = ${node.id}: pos:`, npos)
+        node.setPos(g, npos)
+      }
+      layer = layer.setPos(g, pos)
+      pos += dir * (height + trackSep)
+      for (const track of layer.tracks) {
+        for (const segId of track)
+          g.getSeg(segId).setTrackPos(g, pos)
+        pos += dir * g.options.edgeSpacing
+      }
+    }
+  }
+}

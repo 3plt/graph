@@ -14,7 +14,8 @@
       "extensions": [
         "vscode.git",
         "vscode.npm",
-        "ms-vscode.js-debug"
+        "ms-vscode.js-debug",
+        "vitest.explorer"
       ]
     }
   },
@@ -28,13 +29,11 @@
   "remoteUser": "node",
   "features": {
     "ghcr.io/devcontainers/features/git:1": {
-      "version": "latest"
+      "version": "latest",
+      "copyGitConfig": false
     },
     "ghcr.io/devcontainers/features/github-cli:1": {
       "version": "latest"
     }
-  },
-  "mounts": [
-    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.gitconfig,target=/home/node/.gitconfig,type=bind,consistency=cached"
-  ]
+  }
 }

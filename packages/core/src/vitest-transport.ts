@@ -6,11 +6,11 @@ import Transport from 'winston-transport'
  * associated with tests in the VS Code Vitest extension.
  */
 export class VitestTransport extends Transport {
-  constructor(opts) {
+  constructor(opts?: Transport.TransportStreamOptions) {
     super(opts)
   }
 
-  log(info, callback) {
+  log(info: { [key: string | symbol]: any }, callback: () => void) {
     setImmediate(() => {
       this.emit('logged', info)
     })

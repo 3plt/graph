@@ -7,6 +7,7 @@
   "module": "./dist/index.mjs",
   "exports": {
     ".": {
+      "source": "./src/index.ts",
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
     }
@@ -18,8 +19,8 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsup src/index.js --format cjs,esm",
-    "dev": "tsup src/index.js --format cjs,esm --watch",
+    "build": "tsup",
+    "dev": "tsup --watch",
     "test": "vitest run",
     "test:watch": "vitest"
   },
@@ -30,6 +31,7 @@
   },
   "dependencies": {
     "immutable": "^5.1.4",
+    "jsx-dom": "^8.1.6",
     "winston": "^3.18.3",
     "winston-transport": "^4.9.0"
   }

@@ -1,0 +1,21 @@
+.g3p-seg-container {
+  transition: opacity 0.2s ease;
+}
+
+.g3p-seg-line {
+  transition: stroke 0.2s ease, stroke-width 0.2s ease;
+}
+
+.g3p-seg-line.hovered {
+  stroke-width: 4;
+  opacity: 1;
+}
+
+.g3p-seg-line.selected {
+  stroke: var(--graph-node-border-selected, #3b82f6);
+  stroke-width: 3;
+}
+
+.g3p-seg-hitbox {
+  cursor: pointer;
+}

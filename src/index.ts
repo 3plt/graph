@@ -3,9 +3,11 @@
  */
 
 // Re-export everything from core
-export * from '@3plate/graph-core'
+import * as core from '@3plate/graph-core'
 
 // Re-export everything from framework packages
-export * from '@3plate/graph-react'
-export * from '@3plate/graph-vue'
-export * from '@3plate/graph-angular'
+import * as react from '@3plate/graph-react'
+import * as vue from '@3plate/graph-vue'
+import * as angular from '@3plate/graph-angular'
+
+export { core, react, vue, angular }

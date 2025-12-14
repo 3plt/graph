@@ -1,21 +1,19 @@
 import { Set as ISet } from 'immutable'
-import { Node } from '../types/node'
-import { EdgeEnd, Edge } from '../types/edge'
+import { Node } from '../node'
+import { Edge } from '../edge'
 import { logger } from '../../log'
-import { Seg } from '../types/seg'
-import { Graph } from '../types/graph'
-import { Side } from '../types/enums'
+import { Seg } from '../seg'
+import { Graph } from '../graph'
+import { Side } from '../../common'
 
 const log = logger('dummy')
 
 export class Dummy {
   static updateDummies(g: Graph) {
-    log.debug(`updating dummies:`, [...g.dirtyEdges])
     // check all dirty edges to see if they need segments added or removed
     for (const edgeId of g.dirtyEdges) {
-      log.debug(`updating dummies of edge ${edgeId}`)
       const edge = g.getEdge(edgeId)
-      const { type } = edge
+      const { type, style } = edge
       const sourceLayer = edge.sourceNode(g).layerIndex(g)
       const targetLayer = edge.targetNode(g).layerIndex(g)
       let segIndex = 0
@@ -33,7 +31,7 @@ export class Dummy {
           const segLayer = seg ? seg.targetNode(g).layerIndex(g) : null
           if (segIndex == segs.length || segLayer! > layerIndex) {
             // either a gap existed, or we reached the end; either way, add a new segment
-            let target: EdgeEnd
+            let target: Edge['target']
             if (layerIndex == targetLayer) {
               target = edge.target
             } else {
@@ -43,8 +41,7 @@ export class Dummy {
               })
               target = { id: dummy.id }
             }
-            seg = Seg.add(g, { source, target, type, edgeIds: ISet([edgeId]) })
-            log.debug(`edge ${edgeId}: adding segment ${seg.id} from ${source.id} at layer ${layerIndex - 1} to ${target.id} at layer ${layerIndex}`)
+            seg = Seg.add(g, { source, target, type, style, edgeIds: ISet([edgeId]) })
             segs.splice(segIndex, 0, seg.id)
             changed = true
           } else if (
@@ -56,7 +53,6 @@ export class Dummy {
               seg!.target.port != edge.target.port
             )
           ) {
-            log.debug(`edge ${edgeId}: removing segment ${seg!.id} from layer ${layerIndex - 1} to layer ${layerIndex}`)
             seg = seg!.delEdgeId(g, edgeId)
             segs.splice(segIndex, 1)
             changed = true
@@ -70,7 +66,6 @@ export class Dummy {
       }
       // remove any remaining segments
       while (segIndex < segs.length) {
-        log.debug(`edge ${edgeId}: removing trailing segment ${segs[segIndex]}`)
         g.getSeg(segs[segIndex]).delEdgeId(g, edgeId)
         segs.splice(segIndex, 1)
         changed = true
@@ -78,7 +73,6 @@ export class Dummy {
       }
       // update edge with new segments if a change occurred
       if (changed) {
-        log.debug(`edge ${edgeId}: updated segments to ${segs.join(', ')}`)
         edge.setSegIds(g, segs)
       }
     }
@@ -97,7 +91,6 @@ export class Dummy {
     const dir = side == 'source' ? 'in' : 'out'
     const altSide = side == 'source' ? 'target' : 'source'
     const altDir = altSide == 'source' ? 'in' : 'out'
-    log.debug(`merging dummies by ${side}`)
     for (const layerId of layerIds) {
       // for each layer, we'll find merge-able dummy nodes
       let layer = g.getLayer(layerId)
@@ -108,7 +101,7 @@ export class Dummy {
         const node = g.getNode(nodeId)
         if (node.isMerged) continue
         const edge = g.getEdge(node.edgeIds[0])
-        const key = Edge.id(edge, 'k:', side)
+        const key = Edge.key(edge, 'k:', side)
         if (!groups.has(key)) groups.set(key, new Set())
         groups.get(key)!.add(node)
       }

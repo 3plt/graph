@@ -2,22 +2,33 @@ import { Record, Set as ISet } from 'immutable'
 import { LayerId } from './layer'
 import { EdgeId, Edge } from './edge'
 import { SegId, Seg } from './seg'
-import { PortId } from './port'
-import { Dir, Side, Dims, Pos } from './enums'
+import { Dir, Side, Dims, Pos, LinkType } from '../common'
+import { NodeStyle, RenderNode } from '../api/options'
 import { Graph } from './graph'
 import { Layer } from './layer'
 
 export type NodeId = string
+export type PortId = string
+export type NodeKey = string
 
-type LinkType = 'edges' | 'segs'
+export type PortData = {
+  id: string,
+  label?: string,
+}
 
-export type NodeUserProps = {
-  id: NodeId
-  ports: { in: PortId[], out: PortId[] }
+export type PublicNodeData = {
+  id: NodeId,
+  data: any,
+  version: number,
+  title?: string
+  text?: string
+  style?: NodeStyle
+  ports: { in: PortData[] | null, out: PortData[] | null }
+  render?: RenderNode<any>
   dims?: Dims
 }
 
-export type NodeProps = NodeUserProps & {
+type NodeData = PublicNodeData & {
   aligned: { in?: NodeId, out?: NodeId }
   edges: { in: ISet<EdgeId>, out: ISet<EdgeId> }
   segs: { in: ISet<SegId>, out: ISet<SegId> }
@@ -31,18 +42,18 @@ export type NodeProps = NodeUserProps & {
   mutable: boolean
 }
 
-type NewDummyProps = {
-  edgeIds: EdgeId[],
-  layerId: LayerId,
-  isMerged?: boolean
-}
-
-const defaultNodeProps: NodeProps = {
+const defNodeData: NodeData = {
   id: '',
+  data: undefined,
+  version: 0,
+  title: undefined,
+  text: undefined,
+  style: undefined,
+  render: undefined,
+  ports: { in: null, out: null },
   aligned: {},
   edges: { in: ISet(), out: ISet() },
   segs: { in: ISet(), out: ISet() },
-  ports: { in: [], out: [] },
   layerId: '',
   isDummy: false,
   isMerged: false,
@@ -54,7 +65,7 @@ const defaultNodeProps: NodeProps = {
   mutable: false,
 }
 
-export class Node extends Record(defaultNodeProps) {
+export class Node extends Record(defNodeData) {
   static dummyPrefix = 'd:'
 
   get edgeId(): EdgeId {
@@ -73,14 +84,22 @@ export class Node extends Record(defaultNodeProps) {
     return this.get('edgeIds')
   }
 
+  get key(): NodeKey {
+    return this.isDummy ? this.id : Node.key(this)
+  }
+
+  static key(node: PublicNodeData): NodeKey {
+    return `${node.id}:${node.version}`
+  }
+
   static isDummyId(nodeId: NodeId): boolean {
     return nodeId.startsWith(Node.dummyPrefix)
   }
 
-  static addNormal(g: Graph, props: NodeUserProps): Node {
+  static addNormal(g: Graph, data: PublicNodeData): Node {
     const layer = g.layerAt(0)
     const node = new Node({
-      ...props,
+      ...data,
       edges: { in: ISet(), out: ISet() },
       segs: { in: ISet(), out: ISet() },
       aligned: {},
@@ -93,10 +112,10 @@ export class Node extends Record(defaultNodeProps) {
     return node
   }
 
-  static addDummy(g: Graph, props: NewDummyProps): Node {
-    const layer = g.getLayer(props.layerId)
+  static addDummy(g: Graph, data: Partial<NodeData>): Node {
+    const layer = g.getLayer(data.layerId!)
     const node = new Node({
-      ...props,
+      ...data,
       id: `${Node.dummyPrefix}${g.nextDummyId++}`,
       edges: { in: ISet(), out: ISet() },
       segs: { in: ISet(), out: ISet() },
@@ -111,6 +130,14 @@ export class Node extends Record(defaultNodeProps) {
     g.nodes.set(node.id, node)
     g.dirtyNodes.add(node.id)
     return node
+  }
+
+  static del(g: Graph, node: PublicNodeData): null {
+    return g.getNode(node.id).delSelf(g)
+  }
+
+  static update(g: Graph, data: PublicNodeData): Node {
+    return g.getNode(data.id).mut(g).merge(data)
   }
 
   mut(g: Graph): Node {
@@ -143,6 +170,10 @@ export class Node extends Record(defaultNodeProps) {
       this.segs.out.size == 0
   }
 
+  hasPorts(): boolean {
+    return !!this.ports?.in?.length || !!this.ports?.out?.length
+  }
+
   layerIndex(g: Graph): number {
     return this.getLayer(g).index
   }
@@ -153,12 +184,10 @@ export class Node extends Record(defaultNodeProps) {
 
   setIndex(g: Graph, index: number): Node {
     if (this.index == index) return this
-    console.log(`set index of ${this.id} to ${index}`)
     return this.mut(g).set('index', index)
   }
 
   setLayerPos(g: Graph, lpos: number): Node {
-    console.log('setLayerPos', this.id, lpos)
     if (this.lpos == lpos) return this
     return this.mut(g).set('lpos', lpos)
   }
@@ -175,7 +204,6 @@ export class Node extends Record(defaultNodeProps) {
   }
 
   moveToLayer(g: Graph, layer: Layer): Node {
-    console.log('moveToLayer', this, this.getLayer(g), layer) // XXX
     this.getLayer(g).delNode(g, this.id)
     layer.addNode(g, this.id)
     return this.setLayer(g, layer.id)

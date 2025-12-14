@@ -1,5 +1,5 @@
-import { Graph } from '../types/graph'
-import { Node } from '../types/node'
+import { Graph } from '../graph'
+import { Node } from '../node'
 
 export class Cycles {
   static info(g: Graph, node: Node) {

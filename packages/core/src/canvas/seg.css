@@ -3,17 +3,23 @@
 }
 
 .g3p-seg-line {
+  stroke: var(--g3p-edge-color, #64748b);
+  stroke-width: 1;
   transition: stroke 0.2s ease, stroke-width 0.2s ease;
 }
 
+.g3p-seg-marker {
+  fill: var(--g3p-edge-color, #64748b);
+}
+
 .g3p-seg-line.hovered {
-  stroke-width: 4;
+  stroke-width: 2;
   opacity: 1;
 }
 
 .g3p-seg-line.selected {
-  stroke: var(--graph-node-border-selected, #3b82f6);
-  stroke-width: 3;
+  stroke: var(--g3p-node-border-selected, #3b82f6);
+  stroke-width: 2;
 }
 
 .g3p-seg-hitbox {

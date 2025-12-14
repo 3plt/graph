@@ -1,8 +1,8 @@
 import { Set as ISet, Seq } from 'immutable'
-import { Graph } from '../types/graph'
-import { Node, NodeId } from '../types/node'
+import { Graph } from '../graph'
+import { Node, NodeId } from '../node'
 import { logger } from '../../log'
-import { LayerId } from '../types/layer'
+import { LayerId } from '../layer'
 
 const log = logger('layers')
 

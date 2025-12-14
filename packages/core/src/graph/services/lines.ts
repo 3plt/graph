@@ -1,8 +1,12 @@
-import { Graph } from "../types/graph"
-import { Seg } from "../types/seg"
-import { Layer } from "../types/layer"
+import { Graph } from "../graph"
+import { Seg } from "../seg"
+import { Layer } from "../layer"
 import { Layout } from "./layout"
-import { Pos } from "../types/enums"
+import { Pos } from "../../common"
+import { logger } from "../../log"
+import { normalize, Markers } from "../../canvas/marker"
+
+const log = logger('lines')
 
 type TPos = Partial<Pos> & { s?: number }
 
@@ -123,9 +127,10 @@ export class Lines {
       const radius = g.options.turnRadius
       const p1 = Layout.anchorPos(g, seg, 'source')
       const p2 = Layout.anchorPos(g, seg, 'target')
+      const marker = normalize(seg)
       const path = seg.trackPos !== undefined
-        ? Lines.createRailroadPath(g, p1, p2, seg.trackPos, radius)
-        : Lines.createDirectPath(g, p1, p2, radius)
+        ? Lines.createRailroadPath(g, p1, p2, seg.trackPos, radius, marker)
+        : Lines.createDirectPath(g, p1, p2, radius, marker)
       const svg = Lines.pathToSVG(path)
       seg.setSVG(g, svg)
     }
@@ -151,20 +156,24 @@ export class Lines {
     return line
   }
 
-  static pathBuilder(g: Graph, start: Pos, end: Pos, trackPos: number, radius: number): PathBuilder {
+  static pathBuilder(g: Graph, start: Pos, end: Pos, trackPos: number, radius: number, marker: Markers): PathBuilder {
     const { x, y } = g
-    const lr = end[x] > start[x]   // true for left to right
+    const lr = end[x] > start[x]     // true for left to right
     const d = lr ? 1 : -1            // d = 1 for left to right, -1 for right to left
-    const o = g.r ? -1 : 1 // o = 1 for forward, -1 for reverse
+    const o = g.r ? -1 : 1           // o = 1 for forward, -1 for reverse
     const rd = radius * d            // rd = radius * d
     const ro = radius * o            // ro = radius * o
     const t = trackPos               // t = track position
 
     // getting the sweep direction right in all orientations is tricky 
-    let s = 0                        // s (sweep) = 0 for CCW, 1 for CW
+    let s = 0              // s (sweep) = 0 for CCW, 1 for CW
     if (g.r) s = 1 - s     // flip direction if reverse orientation
-    if (!lr) s = 1 - s               // flip direction if left to right
-    if (!g.v) s = 1 - s   // flip direction if horizontal
+    if (!lr) s = 1 - s     // flip direction if left to right
+    if (!g.v) s = 1 - s    // flip direction if horizontal
+
+    // adjust start/end for markers
+    if (marker.source) start[y] += o * (g.options.markerSize - 1)
+    if (marker.target) end[y] -= o * (g.options.markerSize - 1)
 
     // set up an incremental drawing function
     const p = { ...start, s }
@@ -178,8 +187,8 @@ export class Lines {
   }
 
   // Create a railroad-style path with two 90-degree turns
-  static createRailroadPath(g: Graph, start: Pos, end: Pos, trackPos: number, radius: number): Line[] {
-    const { x, y, rd, ro, t, s, p, path, advance } = this.pathBuilder(g, start, end, trackPos, radius)
+  static createRailroadPath(g: Graph, start: Pos, end: Pos, trackPos: number, radius: number, marker: Markers): Line[] {
+    const { x, y, rd, ro, t, s, p, path, advance } = this.pathBuilder(g, start, end, trackPos, radius, marker)
 
     // draw the path; notes assume TB layout and LR edge
     advance({ [y]: t - ro }, 'line')                        // straight line down to just above track 
@@ -192,11 +201,13 @@ export class Lines {
   }
 
   // Create a mostly-vertical path with optional S-curve
-  static createDirectPath(g: Graph, start: Pos, end: Pos, radius: number): Line[] {
-    const { x, y, d, o, s, p, path, advance } = this.pathBuilder(g, start, end, 0, radius)
+  static createDirectPath(g: Graph, start: Pos, end: Pos, radius: number, marker: Markers): Line[] {
+    const { x, y, d, o, s, p, path, advance } = this.pathBuilder(g, start, end, 0, radius, marker)
     const dx = Math.abs(end.x - start.x)
     const dy = Math.abs(end.y - start.y)
     const d_ = { x: dx, y: dy }
+
+    // TODO: adjust start/end by markerSize first
 
     // for very straight lines, just draw a line 
     if (dx < 0.1) {

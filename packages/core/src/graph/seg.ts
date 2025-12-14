@@ -1,9 +1,10 @@
 import { Record, Set as ISet } from 'immutable'
-import { Node, NodeId } from './node'
-import { PortId } from './port'
+import { Node, NodeId, PortId } from './node'
 import { EdgeId, Edge } from './edge'
 import { Graph } from './graph'
-import { Side, Pos } from './enums'
+import { Side } from '../common'
+import { EdgeStyle } from '../api/options'
+import { MarkerType } from '../canvas/marker'
 
 export type SegId = string
 
@@ -11,32 +12,34 @@ type SegEnd = {
   id: NodeId
   port?: PortId
   pos?: number
+  marker?: MarkerType
 }
 
-export type SegUserProps = {
+type SegData = {
+  id: string
   source: SegEnd
   target: SegEnd
   type?: string
+  style?: EdgeStyle
   edgeIds: ISet<EdgeId>
-}
-
-export type SegProps = SegUserProps & {
-  id: string
   trackPos?: number
   svg?: string
   mutable: boolean
 }
 
-
-const defaultSegProps: SegProps = {
+const defSegData: SegData = {
   id: '',
   source: { id: '' },
   target: { id: '' },
+  type: undefined,
+  style: undefined,
   edgeIds: ISet(),
+  trackPos: undefined,
+  svg: undefined,
   mutable: false,
 }
 
-export class Seg extends Record(defaultSegProps) {
+export class Seg extends Record(defSegData) {
   static prefix = 's:'
 
   mut(g: Graph): Seg {
@@ -82,7 +85,7 @@ export class Seg extends Record(defaultSegProps) {
     return this.mut(g).set('trackPos', trackPos)
   }
 
-  setSVG(g: Graph, svg?: string): Seg {
+  setSVG(g: Graph, svg: string): Seg {
     if (this.svg == svg) return this
     return this.mut(g).set('svg', svg)
   }
@@ -138,10 +141,10 @@ export class Seg extends Record(defaultSegProps) {
     return this.mut(g).set('edgeIds', this.edgeIds.asMutable().remove(edgeId))
   }
 
-  static add(g: Graph, props: SegUserProps): Seg {
+  static add(g: Graph, data: Partial<SegData>): Seg {
     const seg = new Seg({
-      ...props,
-      id: Edge.id(props, Seg.prefix),
+      ...data,
+      id: Edge.key(data, Seg.prefix),
     })
     seg.link(g)
     g.segs.set(seg.id, seg)

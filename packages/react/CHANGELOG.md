@@ -1,5 +1,12 @@
 # @3plate/graph-react
 
+## 0.1.3
+
+### Patch Changes
+
+- Updated dependencies
+  - @3plate/graph-core@0.1.3
+
 ## 0.1.2
 
 ### Patch Changes

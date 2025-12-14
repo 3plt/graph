@@ -1,39 +1,17 @@
-import { renderNode } from './render-node'
+import { Pos } from '../common'
+import { Node } from './node'
+import { Seg } from './seg'
+import { Dims } from '../common'
+import { CanvasOptions, RenderNode } from '../api/options'
+import { NodeId, NodeKey, PublicNodeData, Node as GraphNode } from '../graph/node'
+import { SegId, Seg as GraphSeg } from '../graph/seg'
+import { logger } from '../log'
+import { markerDefs, styles as markerStyles } from './marker'
+
 import styles from './canvas.css?raw'
 import styler from './styler'
-import { Pos, Dims } from '../graph/types/enums'
-import { Node, NodeOptions } from './node'
-import { Seg, SegOptions } from './seg'
 
-export type EdgeAttributes = {
-  width?: number
-  style?: string
-  color?: string
-  turnRadius?: number
-  sourceTerminal?: string | null
-  targetTerminal?: string | null
-}
-
-export type NodeAttributes = {
-  strokeWidth?: number
-  strokeStyle?: string
-}
-
-export type RenderNode<N> = (node: N) => HTMLElement
-export type EdgeStyle = (type: string) => EdgeAttributes
-export type NodeStyle<N> = (node: N) => NodeAttributes
-
-export type PortStyle = 'inside' | 'outside' | 'custom'
-
-export type CanvasOptions<N> = {
-  renderNode?: RenderNode<N>
-  nodeStyle?: NodeStyle<N>
-  edgeStyle?: EdgeStyle
-  width?: number | string
-  height?: number | string
-  portStyle?: PortStyle
-  classPrefix?: string
-}
+const log = logger('canvas')
 
 type ViewportTransform = {
   x: number
@@ -46,36 +24,35 @@ type Bounds = {
   max: Pos
 }
 
-export interface Canvas<N> extends Required<CanvasOptions<N>> { }
+type CanvasData = Required<CanvasOptions<any>> & {
+  renderNode: RenderNode<any>
+  dummyNodeSize: number
+}
 
-export class Canvas<N> {
+export interface Canvas extends CanvasData { }
+
+export class Canvas {
   container?: HTMLElement
   root?: SVGElement
   group?: SVGElement
   transform!: ViewportTransform
-  bounds!: Bounds
+  bounds: Bounds
   measurement?: HTMLElement
-  nodes: Map<N, Node>
-  segs: Map<string, Seg>
+  allNodes: Map<NodeKey, Node>
+  curNodes: Map<NodeId, Node>
+  curSegs: Map<SegId, Seg>
   updating: boolean
 
-  constructor(options?: CanvasOptions<N>) {
-    Object.assign(this, {
-      renderNode: renderNode,
-      nodeStyle: () => ({}),
-      edgeStyle: () => ({}),
-      portStyle: 'outside',
-      classPrefix: 'g3p',
-      width: '100%',
-      height: '100%',
-      transform: { x: 0, y: 0, scale: 1 },
-      bounds: { min: { x: 0, y: 0 }, max: { x: 1, y: 1 } },
-      ...options,
-    })
-    this.nodes = new Map()
-    this.segs = new Map()
+  constructor(options: CanvasData) {
+    Object.assign(this, options)
+    this.allNodes = new Map()
+    this.curNodes = new Map()
+    this.curSegs = new Map()
     this.updating = false
+    this.bounds = { min: { x: 0, y: 0 }, max: { x: 0, y: 0 } }
+    this.transform = { x: 0, y: 0, scale: 1 }
     this.createMeasurementContainer()
+    this.createCanvasContainer()
   }
 
   private createMeasurementContainer() {
@@ -90,93 +67,103 @@ export class Canvas<N> {
     document.body.appendChild(this.measurement)
   }
 
-  update(callback: () => void) {
-    this.updating = true
-    callback()
-    this.updating = false
+  getNode(key: NodeKey): Node {
+    const node = this.allNodes.get(key)
+    if (!node) throw new Error(`node not found: ${key}`)
+    return node
+  }
+
+  update() {
     let bx0 = Infinity, by0 = Infinity
     let bx1 = -Infinity, by1 = -Infinity
-    for (const node of this.nodes.values()) {
-      const nx0 = node.pos!.x, nx1 = node.pos!.x + node.dims!.w
-      const ny0 = node.pos!.y, ny1 = node.pos!.y + node.dims!.h
+    for (const node of this.curNodes.values()) {
+      const { x, y } = node.pos!
+      const { w, h } = node.dims!
+      const nx0 = x, nx1 = x + w
+      const ny0 = y, ny1 = y + h
       bx0 = Math.min(bx0, nx0)
       by0 = Math.min(by0, ny0)
       bx1 = Math.max(bx1, nx1)
       by1 = Math.max(by1, ny1)
     }
     this.bounds = { min: { x: bx0, y: by0 }, max: { x: bx1, y: by1 } }
-    console.log('bounds', this.bounds)
     this.root!.setAttribute('viewBox', this.viewBox())
   }
 
-  addNode(opts: NodeOptions) {
-    const node = this.nodes.get(opts.data)
-    if (!node) throw new Error('node not found')
-    if (!node.container) node.render()
-    node.setPos(opts.pos!)
-    this.group!.appendChild(node.container!)
+  addNode(gnode: GraphNode) {
+    if (this.curNodes.has(gnode.id))
+      throw new Error('node already exists')
+    const { key } = gnode
+    let node: Node
+    if (gnode.isDummy) {
+      node = new Node(this, gnode)
+      this.allNodes.set(key, node)
+    } else {
+      if (!this.allNodes.has(key))
+        throw new Error('node has not been measured')
+      node = this.getNode(key)
+    }
+    this.curNodes.set(gnode.id, node)
+    node.append()
   }
 
-  updateNode(opts: NodeOptions) {
-    const node = this.nodes.get(opts.data)
-    if (!node) throw new Error('node not found')
-    node.setPos(opts.pos!)
+  updateNode(gnode: GraphNode) {
+    if (gnode.isDummy) throw new Error('dummy node cannot be updated')
+    const node = this.getNode(gnode.key)
+    const cur = this.curNodes.get(gnode.id)
+    if (cur) cur.remove()
+    this.curNodes.set(gnode.id, node)
+    node.append()
   }
 
-  deleteNode(opts: NodeOptions) {
-    const node = this.nodes.get(opts.data)
-    if (!node) throw new Error('node not found')
-    node.container!.remove()
+  deleteNode(gnode: GraphNode) {
+    const node = this.getNode(gnode.key)
+    this.curNodes.delete(gnode.id)
+    node.remove()
   }
 
-  addSeg(opts: SegOptions) {
-    const seg = new Seg(opts)
-    this.segs.set(seg.segId, seg)
-    seg.render()
-    this.group!.appendChild(seg.el!)
+  addSeg(gseg: GraphSeg) {
+    if (this.curSegs.has(gseg.id))
+      throw new Error('seg already exists')
+    const seg = new Seg(this, gseg)
+    this.curSegs.set(gseg.id, seg)
+    seg.append()
   }
 
-  updateSeg(opts: SegOptions) {
-    const seg = this.segs.get(opts.segId)
+  updateSeg(gseg: GraphSeg) {
+    const seg = this.curSegs.get(gseg.id)
     if (!seg) throw new Error('seg not found')
-    seg.setSVG(opts.svg)
+    seg.update(gseg)
   }
 
-  deleteSeg(opts: SegOptions) {
-    const seg = this.segs.get(opts.segId)
+  deleteSeg(gseg: GraphSeg) {
+    const seg = this.curSegs.get(gseg.id)
     if (!seg) throw new Error('seg not found')
-    seg.el!.remove()
-    this.segs.delete(seg.segId)
+    this.curSegs.delete(gseg.id)
+    seg.remove()
   }
 
-  async measure(nodes: any[]) {
+  async measureNodes(nodes: PublicNodeData[]) {
     const newNodes: Node[] = []
     for (const data of nodes) {
-      if (this.nodes.has(data)) continue
-      const node = new Node({
-        data,
-        renderNode: this.renderNode,
-        classPrefix: this.classPrefix,
-        isDummy: false,
-      })
-      this.nodes.set(node.data, node)
-      if (!node.measured) {
-        this.measurement!.appendChild(node.content!)
-        newNodes.push(node)
-      }
+      const node = new Node(this, data)
+      newNodes.push(node)
+      this.measurement!.appendChild(node.content)
     }
-    return new Promise<void>(resolve => {
-      requestAnimationFrame(() => {
-        for (const node of newNodes)
-          node.getSize()
-        this.measurement!.textContent = ''
-        resolve()
-      })
-    })
+    await new Promise(requestAnimationFrame)
+    for (const node of newNodes) {
+      const rect = node.content.getBoundingClientRect()
+      node.setDims({ w: rect.width, h: rect.height })
+      node.renderContainer()
+      const { id, version } = node.data!
+      const key = `${id}:${version}`
+      this.allNodes.set(key, node)
+    }
+    this.measurement!.innerHTML = ''
   }
 
-  getDims(node: any) {
-    return this.nodes.get(node)!.dims!
+  getDims(key: NodeKey) {
+    return this.getNode(key).dims!
   }
 
   private onClick(e: MouseEvent) {
@@ -195,9 +182,12 @@ export class Canvas<N> {
     return `${this.bounds.min.x} ${this.bounds.min.y} ${this.bounds.max.x - this.bounds.min.x} ${this.bounds.max.y - this.bounds.min.y}`
   }
 
-  render(): HTMLElement {
+  private createCanvasContainer() {
+    const style = document.createElement('style')
+    style.textContent = markerStyles
+    document.head.appendChild(style)
     const c = styler('canvas', styles, this.classPrefix)
-    return (<div
+    this.container = (<div
       className={c('container')}
       ref={(el: HTMLElement) => this.container = el}
       // {...panZoomHandlers}
@@ -213,6 +203,10 @@ export class Canvas<N> {
         preserveAspectRatio="xMidYMid meet"
         onClick={this.onClick.bind(this)}
       >
+        <defs>
+          {Object.values(markerDefs).map(marker => marker(this.markerSize, this.classPrefix, false))}
+          {Object.values(markerDefs).map(marker => marker(this.markerSize, this.classPrefix, true))}
+        </defs>
         <g
           ref={(el: SVGElement) => this.group = el}
           transform={this.groupTransform()}

@@ -1,11 +1,11 @@
 import { logger } from '../../log'
 import { Seq } from 'immutable'
-import { Node, NodeId } from '../types/node'
-import { Graph } from '../types/graph'
-import { Dir, Side, Pos } from '../types/enums'
-import { LayerId } from '../types/layer'
-import { Seg } from '../types/seg'
-import { PortId } from '../types/port'
+import { Node, NodeId, PortId } from '../node'
+import { Graph } from '../graph'
+import { Dir, Side, Pos } from '../../common'
+import { LayerId } from '../layer'
+import { Seg } from '../seg'
+import { MarkerType } from '../../canvas/marker'
 
 const log = logger('layout')
 
@@ -14,9 +14,7 @@ export type LayoutStep = 'alignChildren' | 'alignParents' | 'compact'
 export class Layout {
   static parentIndex(g: Graph, node: Node): number {
     const parents = Seq([...node.adjs(g, 'segs', 'in')])
-    console.log(`parents of ${node.id}:`, [...parents], [...parents.map(p => p.index)])
     const pidx = parents.map(p => p.index).min()
-    log.debug(`node ${node.id}: parent index ${pidx}`)
     if (pidx !== undefined) return pidx
     return node.isDummy ? -Infinity : Infinity
   }
@@ -36,7 +34,6 @@ export class Layout {
   }
 
   static positionNodes(g: Graph) {
-    console.log('positionNodes', g.dirtyNodes)
     for (const nodeId of g.dirtyNodes)
       g.dirtyLayers.add(g.getNode(nodeId).layerId)
     let adjustNext = false
@@ -44,14 +41,11 @@ export class Layout {
       if (!adjustNext && !g.dirtyLayers.has(layerId)) continue
       adjustNext = false
       let layer = g.getLayer(layerId)
-      console.log(`positioning layer ${layerId} at ${layer.index}`)
       const pidxs: Map<NodeId, number> = new Map()
       for (const nodeId of layer.nodeIds)
         pidxs.set(nodeId, Layout.parentIndex(g, g.getNode(nodeId)))
-      console.log('pidxs', pidxs)
       const sorted = [...layer.nodeIds].sort(
         (aId, bId) => Layout.compareNodes(g, aId, bId, pidxs))
-      console.log(`sorted:`, sorted)
       if (layer.hasSortOrder(sorted)) continue
       g.dirtyLayers.add(layerId)
       layer = layer.setSorted(g, sorted)
@@ -59,7 +53,6 @@ export class Layout {
       let lpos = 0
       for (let i = 0; i < sorted.length; i++) {
         let node = g.getNode(sorted[i])
-        log.debug(`node ${node.id}: final index ${i}`)
         node = node.setIndex(g, i).setLayerPos(g, lpos)
         const size = node.dims?.[g.w] ?? 0
         lpos += size + g.options.nodeMargin
@@ -105,7 +98,12 @@ export class Layout {
     for (const layerId of layerIds) {
       if (!adjustNext && !g.dirtyLayers.has(layerId)) continue
       adjustNext = false
+      let iterations = 0
       while (true) {
+        if (++iterations > 10) {
+          log.error(`alignNodes: infinite loop detected in layer ${layerId}`)
+          break
+        }
         let changed = false
         const nodeIds = Layout.sortLayer(g, layerId, reverseNodes)
         for (const nodeId of nodeIds) {
@@ -176,17 +174,34 @@ export class Layout {
         [g.y]: p[g.y] + h / 2,
       } as Pos
 
-    p[g.x] += Layout.nodePortOffset(g, nodeId, seg[side].port)
-    if ((side == 'source') == g.r)
+    p[g.x] += Layout.nodePortOffset(g, nodeId, seg, side)
+    if ((side == 'target') == g.r)
       p[g.y] += h
 
     return p
   }
 
-  static nodePortOffset(g: Graph, nodeId: NodeId, port?: PortId) {
-    if (!port) return g.options.defaultPortOffset
+  static nodePortOffset(g: Graph, nodeId: NodeId, seg: Seg, side: Side) {
     // TODO: figure out how user passes in port positions
-    return g.options.defaultPortOffset
+    const node = g.getNode(nodeId)
+    const dir = side == 'source' ? 'out' : 'in'
+    const alt = side == 'source' ? 'target' : 'source'
+    let segs = []
+    const keyOf = (seg: Seg) => `${seg.type ?? ''}:${seg[side].marker ?? ''}`
+    for (const segId of node.segs[dir])
+      segs.push(g.getSeg(segId))
+    if (seg[side].port) segs = segs.filter(s => s[side].port == seg[side].port)
+    const groups = Object.groupBy(segs, s => keyOf(s))
+    const posMap = new Map()
+    for (const [key, segs] of Object.entries(groups)) {
+      let pos = Infinity
+      for (const seg of segs!) pos = Math.min(pos, seg.node(g, alt).lpos!)
+      posMap.set(key, pos)
+    }
+    const keys = [...posMap.keys()].sort((a, b) => posMap.get(a)! - posMap.get(b)!)
+    const gap = (node.dims?.[g.w] ?? 0) / (keys.length + 1)
+    const index = keys.indexOf(keyOf(seg))
+    return (index + 1) * gap
   }
 
   static shiftNode(
@@ -199,6 +214,7 @@ export class Layout {
     conservative: boolean
   ) {
     const node = g.getNode(nodeId)
+    log.debug(`shift ${nodeId} (at ${node.lpos}) to ${alignId} (at ${lpos})`) // XXX
     if (!conservative)
       Layout.markAligned(g, nodeId, alignId, dir, lpos)
     const space = g.options.nodeMargin
@@ -230,7 +246,7 @@ export class Layout {
       g.getNode(node.aligned[dir]).setAligned(g, alt, undefined)
     if (otherId)
       g.getNode(otherId).setAligned(g, alt, nodeId)
-    node.setAligned(g, dir, otherId)
+    node.setAligned(g, dir, otherId).setLayerPos(g, lpos)
   }
 
   static *aligned(g: Graph, nodeId: NodeId, dir: Dir | 'both') {
@@ -295,34 +311,36 @@ export class Layout {
     let pos = 0
     const dir = g.r ? -1 : 1
     const trackSep = Math.max(
-      g.options.layerMargin,
       g.options.edgeSpacing,
       g.options.turnRadius
+    )
+    const marginSep = Math.max(
+      g.options.edgeSpacing,
+      g.options.layerMargin,
+      g.options.turnRadius + g.options.markerSize
     )
     for (const layerId of g.layerList) {
       let layer = g.getLayer(layerId)
       let height: number
-      console.log(`getCoords: layer = ${layerId} at ${layer.index}`)
       if (g.dirtyLayers.has(layerId)) {
         height = Seq(layer.nodes(g)).map(node => node.dims?.[g.h] ?? 0).max() ?? 0
         layer = layer.setSize(g, height)
       } else height = layer.size
-      console.log(`getCoords: layer = ${layerId}: pos = ${pos}, height = ${height}`)
       for (const node of layer.nodes(g)) {
         if (!g.dirtyNodes.has(node.id) && pos == layer.pos) continue
         const npos: Pos = { [g.x]: node.lpos!, [g.y]: pos } as Pos
         if (!g.n) npos[g.y] += dir * height
         if (g.r == g.n) npos[g.y] -= node.dims?.[g.h] ?? 0
-        console.log(`getCoords: node = ${node.id}: pos:`, npos)
         node.setPos(g, npos)
       }
       layer = layer.setPos(g, pos)
-      pos += dir * (height + trackSep)
+      pos += dir * (height + marginSep)
       for (const track of layer.tracks) {
         for (const segId of track)
           g.getSeg(segId).setTrackPos(g, pos)
-        pos += dir * g.options.edgeSpacing
+        pos += dir * trackSep
       }
+      pos += dir * (marginSep - trackSep)
     }
   }
 }

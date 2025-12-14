@@ -1,126 +1,172 @@
-import { Dims, Pos } from '../graph/types/enums'
+import { Dims, Pos } from '../common'
+import { Canvas } from './canvas'
+import { PublicNodeData } from '../graph/node'
+import { logger } from '../log'
+
 import styles from './node.css?raw'
 import styler from './styler'
 
+const log = logger('canvas')
+
 export type NodeEvent = (node: any, e: MouseEvent) => void
 
-export type NodeOptions = {
-  data?: any
-  renderNode?: (data: any) => HTMLElement
-  onClick?: NodeEvent
-  onMouseEnter?: NodeEvent
-  onMouseLeave?: NodeEvent
-  onContextMenu?: NodeEvent
-  onMouseDown?: NodeEvent
-  onMouseUp?: NodeEvent
-  classPrefix?: string
-  isDummy?: boolean
-  pos?: Pos
-}
-
-export interface Node extends Required<NodeOptions> { }
-
 export class Node {
-  selected!: boolean
-  hovered!: boolean
-  container?: SVGElement
+  selected: boolean
+  hovered: boolean
+  container!: SVGElement
+  content!: HTMLElement
+  canvas: Canvas
+  data?: PublicNodeData
+  classPrefix: string
   dims?: Dims
-  content?: HTMLElement
-  measured: boolean
   isDummy: boolean
+  pos?: Pos
 
-  constructor(options: NodeOptions) {
-    this.isDummy = false
+  constructor(canvas: Canvas, data?: PublicNodeData) {
+    this.canvas = canvas
+    this.data = data
+    this.selected = false
+    this.hovered = false
+    this.classPrefix = data?.style?.classPrefix ?? canvas.classPrefix
+    this.isDummy = !data
 
-    Object.assign(this, {
-      selected: false,
-      hovered: false,
-      renderNode: () => null,
-      onClick: () => null,
-      onMouseEnter: () => null,
-      onMouseLeave: () => null,
-      onContextMenu: () => null,
-      onMouseDown: () => null,
-      onMouseUp: () => null,
-      classPrefix: 'g3p',
-      ...options,
-    })
-
-    if (!this.isDummy) {
-      this.content = this.renderNode(this.data)
-      this.measured = false
+    if (this.isDummy) {
+      const size = canvas.dummyNodeSize
+      this.dims = { w: size, h: size }
     } else {
-      this.measured = true
+      const render = data!.render ?? canvas.renderNode
+      this.content = this.renderContent(render(data!.data))
     }
   }
 
-  getSize() {
-    const rect = this.content!.getBoundingClientRect()
-    this.dims = { w: rect.width, h: rect.height }
-    this.measured = true
+  remove() {
+    this.container.remove()
+  }
+
+  append() {
+    this.canvas.group!.appendChild(this.container)
+  }
+
+  needsContentSize(): boolean {
+    return !this.isDummy && this.content instanceof HTMLElement
+  }
+
+  needsContainerSize(): boolean {
+    return !this.isDummy
+  }
+
+  setDims(dims: Dims) {
+    this.dims = dims
   }
 
   handleClick(e: MouseEvent) {
     e.stopPropagation()
-    this.onClick?.(this.data, e)
+    // this.onClick?.(this.data, e)
   }
 
   handleMouseEnter(e: MouseEvent) {
-    this.onMouseEnter?.(this.data, e)
+    // this.onMouseEnter?.(this.data, e)
   }
 
   handleMouseLeave(e: MouseEvent) {
-    this.onMouseLeave?.(this.data, e)
+    // this.onMouseLeave?.(this.data, e)
   }
 
   handleContextMenu(e: MouseEvent) {
-    if (this.onContextMenu) {
-      e.stopPropagation()
-      this.onContextMenu(this.data, e)
-    }
+    // if (this.onContextMenu) {
+    //   e.stopPropagation()
+    //   this.onContextMenu(this.data, e)
+    // }
   }
 
   handleMouseDown(e: MouseEvent) {
-    this.onMouseDown?.(this.data, e)
+    // this.onMouseDown?.(this.data, e)
   }
 
   handleMouseUp(e: MouseEvent) {
-    this.onMouseUp?.(this.data, e)
+    // this.onMouseUp?.(this.data, e)
   }
 
   setPos(pos: Pos) {
-    console.log(`setPos:`, this, pos) // XXX
     this.pos = pos
-    this.container!.setAttribute('transform', `translate(${this.pos!.x}, ${this.pos!.y})`)
+    const { x, y } = pos
+    this.container!.setAttribute('transform', `translate(${x}, ${y})`)
   }
 
-  // render will be called once the node is measured
-  render(): SVGElement {
-    const c = styler('node', styles, this.classPrefix)
-    return (
+  styleAttr(key: string): string | number | undefined {
+    return this.style(key) as string | number | undefined
+  }
+
+  styleBool(key: string, def?: boolean): boolean {
+    return this.style(key, def) as boolean
+  }
+
+  style(key: string, def?: string | number | boolean): string | number | boolean | undefined {
+    const path = key.split('.')
+    let value: any = this.data!.style
+    for (const k of path) {
+      value = value?.[k]
+      if (value === undefined) break
+    }
+    if (value !== undefined) return value
+    value = this.canvas.nodeStyle
+    for (const k of path) {
+      value = value?.[k]
+      if (value === undefined) break
+    }
+    return value ?? def
+  }
+
+  hasPorts(): boolean {
+    return !!this.data?.ports?.in?.length || !!this.data?.ports?.out?.length
+  }
+
+  renderContent(el: HTMLElement): HTMLElement {
+    if (this.hasPorts() && this.styleAttr('portStyle') == 'inside')
+      el = this.renderInsidePorts(el)
+    if (this.styleBool('border.draw', true))
+      el = this.renderBorder(el)
+    if (this.hasPorts() && this.styleAttr('portStyle') == 'outside')
+      el = this.renderOutsidePorts(el)
+    return el
+  }
+
+  renderContainer() {
+    const c = styler('node', styles, this.canvas.classPrefix)
+    const hasPorts = this.hasPorts()
+    const inner = this.isDummy ? this.renderDummy() : this.renderForeign()
+    this.container = (
       <g
-        ref={(el: SVGElement) => this.container = el}
         className={`${c('container')} ${c('dummy', this.isDummy)}`}
-        // transform={`translate(${this.pos!.x}, ${this.pos!.y})`}
-        onClick={this.handleClick.bind(this)}
-        onMouseEnter={this.handleMouseEnter.bind(this)}
-        onMouseLeave={this.handleMouseLeave.bind(this)}
-        onContextMenu={this.handleContextMenu.bind(this)}
-        onMouseDown={this.handleMouseDown.bind(this)}
-        onMouseUp={this.handleMouseUp.bind(this)}
+        onClick={(e) => this.handleClick(e)}
+        onMouseEnter={(e) => this.handleMouseEnter(e)}
+        onMouseLeave={(e) => this.handleMouseLeave(e)}
+        onContextMenu={(e) => this.handleContextMenu(e)}
+        onMouseDown={(e) => this.handleMouseDown(e)}
+        onMouseUp={(e) => this.handleMouseUp(e)}
         style={{ cursor: 'pointer' }}
       >
-        {this.isDummy ? this.renderDummy() : this.renderContent()}
+        {inner}
       </g>
     ) as SVGElement
   }
 
+  renderForeign(): SVGElement {
+    const { w, h } = this.dims!
+    return (
+      <foreignObject width={w} height={h}>
+        {this.content}
+      </foreignObject>
+    ) as SVGElement
+  }
+
   renderDummy(): SVGElement {
-    const c = styler('node', styles, this.classPrefix)
+    const c = styler('node', styles, this.canvas.classPrefix)
     let { w, h } = this.dims!
+    const s = this.styleAttr('border.size')
     w /= 2
     h /= 2
-    return (<>
+    return (<g>
       <ellipse
         cx={w} cy={h} rx={w} ry={h}
         className={c('background')}
@@ -129,56 +175,28 @@ export class Node {
         cx={w} cy={h} rx={w} ry={h}
         fill="none"
         className={c('border')}
-        // strokeWidth={isSelected ? 3 : 2}
-        strokeWidth="2"
+        strokeWidth={s}
       />
-    </>) as SVGElement
+    </g>) as SVGElement
   }
 
-  renderContent(): SVGElement {
-    const c = styler('node', styles, this.classPrefix)
-    const { w, h } = this.dims!
-    return (
-      <>
-        {/* Background rectangle for node */}
-        < rect
-          className={c('background')}
-          width={w}
-          height={h}
-          rx={8}
-          ry={8}
-        />
+  renderInsidePorts(el: HTMLElement): HTMLElement {
+    return el
+  }
 
-        {/* Border rectangle */}
-        < rect
-          className={c('border')}
-          width={w}
-          height={h}
-          rx={8}
-          ry={8}
-          fill="none"
-          // strokeWidth={isSelected ? 3 : 2}
-          strokeWidth="2"
-        />
+  renderOutsidePorts(el: HTMLElement): HTMLElement {
+    return el
+  }
 
-        {/* Custom content via foreignObject */}
-        < foreignObject
-          width={w}
-          height={h}
-          className={c('content-wrapper')}
-        >
-          <div
-            className={c('content')}
-            style={{
-              width: `${w}px`,
-              height: `${h}px`,
-              overflow: 'hidden'
-            }}
-          >
-            {this.content!}
-          </div>
-        </foreignObject >
-      </>
-    ) as SVGElement
+  renderBorder(el: HTMLElement): HTMLElement {
+    const c = styler('node', styles, this.canvas.classPrefix)
+    const r = this.styleAttr('border.radius')
+    const s = this.styleAttr('border.size')
+    return <div
+      className={c('border')}
+      style={{ borderRadius: r, borderWidth: s }}
+    >
+      {el}
+    </div> as HTMLElement
   }
 }

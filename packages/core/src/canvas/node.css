@@ -2,27 +2,20 @@
   transition: opacity 0.2s ease;
 }
 
-.g3p-node-background {
-  fill: var(--graph-node-bg, #ffffff);
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
-}
-
 .g3p-node-border {
-  stroke: var(--graph-node-border, #cbd5e1);
-  transition: stroke 0.2s ease, stroke-width 0.2s ease;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: all 0.15s ease;
 }
 
-.g3p-node-background.hovered {
-  fill: var(--graph-node-hover, #f1f5f9);
-}
-
-.g3p-node-border.hovered {
-  stroke: #94a3b8;
+.g3p-node-border:hover {
+  border-color: #cbd5e1;
 }
 
 .g3p-node-border.selected {
-  stroke: var(--graph-node-border-selected, #3b82f6);
-  stroke-width: 3;
+  outline: 2px solid #3b82f6;
 }
 
 .g3p-node-content-wrapper {
@@ -39,13 +32,13 @@
   height: 100%;
 }
 
-/* Dummy node styles */
+/* Dummy node styles - these remain SVG since dummies are ellipses */
 .g3p-node-dummy .g3p-node-background {
-  fill: var(--graph-dummy-node-bg, #f8fafc);
+  fill: #f8fafc;
   opacity: 0.8;
 }
 
-.g3p-node-dummy .g3p-node-border {
-  stroke: var(--graph-dummy-node-border, #cbd5e1);
+.g3p-node-dummy {
+  stroke: #cbd5e1;
   stroke-dasharray: 3, 3;
 }

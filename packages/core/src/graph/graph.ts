@@ -1,62 +1,40 @@
 import { Map as IMap, List as IList, Set as ISet } from 'immutable'
-import { MergeOrder, NodeAlign, Orientation, Dims, Pos } from './enums'
-import { Node, NodeId, NodeUserProps } from './node'
-import { Edge, EdgeId, EdgeUserProps } from './edge'
+import { Dims, Pos } from '../common'
+import { GraphOptions } from '../api/options'
+import { Node, NodeId, PublicNodeData } from './node'
+import { Edge, EdgeId, PublicEdgeData } from './edge'
 import { Seg, SegId } from './seg'
 import { Layer, LayerId } from './layer'
 import { Mutator } from './mutator'
-import { Cycles } from '../services/cycles'
-import { Dummy } from '../services/dummy'
-import { Layers } from '../services/layers'
-import { Layout, LayoutStep } from '../services/layout'
-import { Lines } from '../services/lines'
-
-export type GraphOptions = {
-  mergeOrder?: MergeOrder
-  nodeMargin?: number
-  dummyNodeSize?: number
-  defaultPortOffset?: number
-  nodeAlign?: NodeAlign
-  edgeSpacing?: number
-  turnRadius?: number
-  orientation?: Orientation
-  layerMargin?: number
-  alignIterations?: number
-  alignThreshold?: number
-  separateTrackSets?: boolean
-  layoutSteps?: LayoutStep[] | null
-}
-
-export const defaultOptions: Required<GraphOptions> = {
-  mergeOrder: ['target', 'source'],
-  nodeMargin: 15,
-  dummyNodeSize: 15,
-  defaultPortOffset: 20,
-  nodeAlign: 'natural',
-  edgeSpacing: 10,
-  turnRadius: 10,
-  orientation: 'TB',
-  layerMargin: 5,
-  alignIterations: 5,
-  alignThreshold: 10,
-  separateTrackSets: true,
-  layoutSteps: null,
-}
-
-type Changes = {
-  addedNodes: NodeUserProps[]
-  removedNodes: NodeUserProps[]
-  updatedNodes: NodeUserProps[]
-  addedEdges: EdgeUserProps[]
-  removedEdges: EdgeUserProps[]
-}
+import { Cycles } from './services/cycles'
+import { Dummy } from './services/dummy'
+import { Layers } from './services/layers'
+import { Layout } from './services/layout'
+import { Lines } from './services/lines'
 
 type GraphArgs = {
-  prior?: Graph
   changes?: Changes
-  options?: GraphOptions
-  nodes?: NodeUserProps[]
-  edges?: EdgeUserProps[]
+  options?: Required<GraphOptions>
+  prior?: Graph
+}
+
+export type Changes = {
+  addedNodes: PublicNodeData[],
+  removedNodes: PublicNodeData[],
+  updatedNodes: PublicNodeData[],
+  addedEdges: PublicEdgeData[],
+  removedEdges: PublicEdgeData[],
+  updatedEdges: PublicEdgeData[],
+  description?: string,
+}
+
+const emptyChanges: Changes = {
+  addedNodes: [],
+  removedNodes: [],
+  updatedNodes: [],
+  addedEdges: [],
+  removedEdges: [],
+  updatedEdges: [],
 }
 
 export class Graph {
@@ -71,15 +49,15 @@ export class Graph {
   options: Required<GraphOptions>
   changes: Changes
 
-  dirtyNodes: Set<NodeId>
-  dirtyEdges: Set<EdgeId>
-  dirtyLayers: Set<LayerId>
-  dirtySegs: Set<SegId>
-  dirty: boolean
+  dirtyNodes!: Set<NodeId>
+  dirtyEdges!: Set<EdgeId>
+  dirtyLayers!: Set<LayerId>
+  dirtySegs!: Set<SegId>
+  dirty!: boolean
 
-  delNodes: Set<NodeId>
-  delEdges: Set<EdgeId>
-  delSegs: Set<SegId>
+  delNodes!: Set<NodeId>
+  delEdges!: Set<EdgeId>
+  delSegs!: Set<SegId>
 
   r: boolean
   v: boolean
@@ -90,36 +68,10 @@ export class Graph {
   y: keyof Pos
   d: Pos
 
-  constructor({ prior, changes, options, nodes, edges }: GraphArgs = {}) {
+  constructor({ prior, changes, options }: GraphArgs) {
+    this.options = prior?.options ?? options!
+    this.changes = changes ?? emptyChanges
     this.initFromPrior(prior)
-    this.dirtyNodes = new Set()
-    this.dirtyEdges = new Set()
-    this.dirtyLayers = new Set()
-    this.dirtySegs = new Set()
-    this.delNodes = new Set()
-    this.delEdges = new Set()
-    this.delSegs = new Set()
-    this.options = {
-      ...defaultOptions,
-      ...prior?.options,
-      ...options
-    }
-
-    this.changes = changes ?? {
-      addedNodes: [],
-      removedNodes: [],
-      updatedNodes: [],
-      addedEdges: [],
-      removedEdges: [],
-    }
-    this.changes.addedNodes.push(...(nodes || []))
-    this.changes.addedEdges.push(...(edges || []))
-
-    this.dirty =
-      this.changes.addedNodes.length > 0 ||
-      this.changes.removedNodes.length > 0 ||
-      this.changes.addedEdges.length > 0 ||
-      this.changes.removedEdges.length > 0
 
     // Set orientation-based properties
     this.r = this.options.orientation === 'BT' || this.options.orientation === 'RL'
@@ -141,39 +93,43 @@ export class Graph {
     else
       this.n = natAligns[this.options.orientation] == this.options.nodeAlign
 
-    if (this.dirty) {
-      try {
-        this.beginMutate()
-        this.applyChanges()
-        Cycles.checkCycles(this)
-        Layers.updateLayers(this)
-        Dummy.updateDummies(this)
-        Dummy.mergeDummies(this)
-        Layout.positionNodes(this)
-        Layout.alignAll(this)
-        Lines.trackEdges(this)
-        Layout.getCoords(this)
-        Lines.pathEdges(this)
-      } catch (e) {
-        this.initFromPrior(this.prior)
-        throw e
-      } finally {
-        this.endMutate()
-      }
+    if (this.dirty) this.processUpdate()
+  }
+
+  processUpdate() {
+    try {
+      this.beginMutate()
+      this.applyChanges()
+      Cycles.checkCycles(this)
+      Layers.updateLayers(this)
+      Dummy.updateDummies(this)
+      Dummy.mergeDummies(this)
+      Layout.positionNodes(this)
+      Layout.alignAll(this)
+      Lines.trackEdges(this)
+      Layout.getCoords(this)
+      Lines.pathEdges(this)
+    } catch (e) {
+      this.initFromPrior(this.prior)
+      throw e
+    } finally {
+      this.endMutate()
     }
   }
 
   applyChanges() {
     for (const edge of this.changes.removedEdges)
-      this.getEdge(Edge.id(edge)).delSelf(this)
+      Edge.del(this, edge)
     for (const node of this.changes.removedNodes)
-      this.getNode(node.id).delSelf(this)
+      Node.del(this, node)
     for (const node of this.changes.addedNodes)
       Node.addNormal(this, node)
     for (const edge of this.changes.addedEdges)
       Edge.add(this, edge)
     for (const node of this.changes.updatedNodes)
-      this.dirtyNodes.add(node.id)
+      Node.update(this, node)
+    for (const edge of this.changes.updatedEdges)
+      Edge.update(this, edge)
   }
 
   layerAt(index: number): Layer {
@@ -257,49 +213,49 @@ export class Graph {
     return new Graph({ prior: this, changes: mut.changes })
   }
 
-  addNode(node: NodeUserProps) {
+  addNode(node: PublicNodeData) {
     return this.withMutations(mutator => {
       mutator.addNode(node)
     })
   }
 
-  addNodes(...nodes: NodeUserProps[]) {
+  addNodes(...nodes: PublicNodeData[]) {
     return this.withMutations(mutator => {
       nodes.forEach(node => mutator.addNode(node))
     })
   }
 
-  addEdges(...edges: EdgeUserProps[]) {
-    return this.withMutations(mutator => {
-      edges.forEach(edge => mutator.addEdge(edge))
-    })
-  }
-
-  addEdge(edge: EdgeUserProps) {
-    return this.withMutations(mutator => {
-      mutator.addEdge(edge)
-    })
-  }
-
-  removeNodes(...nodes: NodeUserProps[]) {
+  removeNodes(...nodes: PublicNodeData[]) {
     return this.withMutations(mutator => {
       nodes.forEach(node => mutator.removeNode(node))
     })
   }
 
-  removeNode(node: NodeUserProps) {
+  removeNode(node: PublicNodeData) {
     return this.withMutations(mutator => {
       mutator.removeNode(node)
     })
   }
 
-  removeEdges(...edges: EdgeUserProps[]) {
+  addEdges(...edges: PublicEdgeData[]) {
+    return this.withMutations(mutator => {
+      edges.forEach(edge => mutator.addEdge(edge))
+    })
+  }
+
+  addEdge(edge: PublicEdgeData) {
+    return this.withMutations(mutator => {
+      mutator.addEdge(edge)
+    })
+  }
+
+  removeEdges(...edges: PublicEdgeData[]) {
     return this.withMutations(mutator => {
       edges.forEach(edge => mutator.removeEdge(edge))
     })
   }
 
-  removeEdge(edge: EdgeUserProps) {
+  removeEdge(edge: PublicEdgeData) {
     return this.withMutations(mutator => {
       mutator.removeEdge(edge)
     })
@@ -346,6 +302,19 @@ export class Graph {
     this.nextLayerId = prior?.nextLayerId ?? 0
     this.nextDummyId = prior?.nextDummyId ?? 0
     this.prior = prior
+    this.dirtyNodes = new Set()
+    this.dirtyEdges = new Set()
+    this.dirtyLayers = new Set()
+    this.dirtySegs = new Set()
+    this.delNodes = new Set()
+    this.delEdges = new Set()
+    this.delSegs = new Set()
+    this.dirty =
+      this.changes.addedNodes.length > 0 ||
+      this.changes.removedNodes.length > 0 ||
+      this.changes.updatedNodes.length > 0 ||
+      this.changes.addedEdges.length > 0 ||
+      this.changes.removedEdges.length > 0
   }
 
   private beginMutate() {

@@ -3,13 +3,13 @@ import { Node, NodeId } from './node'
 import { Graph } from './graph'
 import { SegId } from './seg'
 import { Edge } from './edge'
-import { logger } from '../../log'
+import { logger } from '../log'
 
 const log = logger('layer')
 
 export type LayerId = string
 
-export type LayerProps = {
+export type LayerData = {
   id: LayerId
   index: number
   nodeIds: ISet<NodeId>
@@ -21,7 +21,7 @@ export type LayerProps = {
   mutable: boolean
 }
 
-const defaultLayerProps: LayerProps = {
+const defLayerData: LayerData = {
   id: '',
   index: 0,
   nodeIds: ISet(),
@@ -33,7 +33,7 @@ const defaultLayerProps: LayerProps = {
   mutable: false,
 }
 
-export class Layer extends Record(defaultLayerProps) {
+export class Layer extends Record(defLayerData) {
   static prefix = 'l:'
 
   mut(g: Graph): Layer {
@@ -132,7 +132,6 @@ export class Layer extends Record(defaultLayerProps) {
 
   setSorted(g: Graph, nodeIds: NodeId[]): Layer {
     if (this.hasSortOrder(nodeIds)) return this
-    console.log(`setting sorted for layer ${this.id}`)
     nodeIds.forEach((nodeId, i) => g.getNode(nodeId).setIndex(g, i))
     return this.mut(g).merge({ sorted: nodeIds, isSorted: true })
   }

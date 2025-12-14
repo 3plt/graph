@@ -1,118 +1,109 @@
-import { EdgeAttributes } from './canvas'
-import { Side } from '../graph/types/enums'
+import { Canvas } from './canvas'
+import { normalize } from './marker'
+import { EdgeStyle } from '../api/options'
+import { Seg as GraphSeg } from '../graph/seg'
+import { MarkerType } from './marker'
+import { logger } from '../log'
+
 import styles from './seg.css?raw'
 import styler from './styler'
 
+const log = logger('canvas')
+
 type SegEvent = (data: any, e: MouseEvent) => void
 
-export type SegOptions = {
-  segId: string
-  edgeId: string
-  edgeData: any
-  svg: string
-  el?: SVGElement
-
-  attrs?: EdgeAttributes
-  onClick?: SegEvent
-  onMouseEnter?: SegEvent
-  onMouseLeave?: SegEvent
-  onContextMenu?: SegEvent
-  classPrefix?: string
-  targetDummy: boolean
-}
-
-export interface Seg extends Required<SegOptions> { }
-
 export class Seg {
+  id: string
   selected: boolean
   hovered: boolean
+  canvas: Canvas
+  classPrefix: string
+  style: EdgeStyle | undefined
+  svg: string
+  el: SVGElement
+  source: { marker?: MarkerType }
+  target: { marker?: MarkerType }
 
-  constructor(options: SegOptions) {
+  constructor(canvas: Canvas, data: GraphSeg) {
+    this.id = data.id
+    this.canvas = canvas
     this.selected = false
     this.hovered = false
-
-    Object.assign(this, {
-      onClick: () => { },
-      onMouseEnter: () => { },
-      onMouseLeave: () => { },
-      onContextMenu: () => { },
-      classPrefix: 'g3p',
-      ...options
-    })
-
-    this.attrs ??= {}
-    this.attrs.targetTerminal ??= 'arrow'
+    this.svg = data.svg!
+    this.classPrefix = canvas.classPrefix
+    this.source = data.source
+    this.target = data.target
+    this.style = data.style
+    this.el = this.render()
   }
 
   handleClick(e: MouseEvent) {
     e.stopPropagation()
-    this.onClick?.(this.edgeData, e)
+    // this.onClick?.(this.edgeData, e)
   }
 
   handleMouseEnter(e: MouseEvent) {
-    this.onMouseEnter?.(this.edgeData, e)
+    // this.onMouseEnter?.(this.edgeData, e)
   }
 
   handleMouseLeave(e: MouseEvent) {
-    this.onMouseLeave?.(this.edgeData, e)
+    // this.onMouseLeave?.(this.edgeData, e)
   }
 
   handleContextMenu(e: MouseEvent) {
-    if (this.onContextMenu) {
-      e.stopPropagation()
-      this.onContextMenu(this.edgeData, e)
-    }
+    // if (this.onContextMenu) {
+    //   e.stopPropagation()
+    //   this.onContextMenu(this.edgeData, e)
+    // }
   }
 
-  renderTerminals() {
-    return {
-      source: this.renderTerminal(this.attrs.sourceTerminal, 'source'),
-      target: this.renderTerminal(this.attrs.targetTerminal, 'target'),
-    }
+  append() {
+    this.canvas.group!.appendChild(this.el!)
   }
 
-  setSVG(svg: string) {
-    this.svg = svg
-    const n = this.el!.childElementCount;
-    (this.el!.childNodes[n - 2] as SVGPathElement).setAttribute('d', svg);
-    (this.el!.childNodes[n - 1] as SVGPathElement).setAttribute('d', svg);
+  remove() {
+    this.el!.remove()
+  }
+
+  update(data: GraphSeg) {
+    this.svg = data.svg!
+    this.style = data.style
+    this.source = data.source
+    this.target = data.target
+    this.remove()
+    this.el = this.render()
+    this.append()
   }
 
   render(): SVGElement {
-    const c = styler('edge', styles, this.classPrefix)
+    const c = styler('seg', styles, this.classPrefix)
     const styleAttrs = {
-      stroke: this.attrs.color,
-      strokeWidth: this.attrs.width,
-      strokeDasharray: this.attrs.style,
+      stroke: this.style?.color,
+      strokeWidth: this.style?.width,
+      strokeDasharray: this.style?.style,
     }
-    const hoverAttrs = {
-      ...styleAttrs,
-      strokeWidth: styleAttrs.strokeWidth ? Math.max(styleAttrs.strokeWidth * 3, 10) : undefined,
-    }
-    const { source, target } = this.renderTerminals()
+    const { source, target } = normalize(this)
     return (
       <g
         ref={(el: SVGElement) => this.el = el}
-        id={`g3p-seg-${this.segId}`}
+        id={`g3p-seg-${this.id}`}
         className={c('container')}
         onClick={this.handleClick.bind(this)}
         onMouseEnter={this.handleMouseEnter.bind(this)}
         onMouseLeave={this.handleMouseLeave.bind(this)}
         onContextMenu={this.handleContextMenu.bind(this)}
       >
-        {source?.defs}
-        {target?.defs}
         <path
           d={this.svg}
           {...styleAttrs}
           fill="none"
           className={c('line')}
-          markerStart={source ? `url(#${source.id})` : undefined}
-          markerEnd={target ? `url(#${target.id})` : undefined}
+          markerStart={source ? `url(#g3p-marker-${source}-reverse)` : undefined}
+          markerEnd={target ? `url(#g3p-marker-${target})` : undefined}
         />
         <path
           d={this.svg}
-          {...hoverAttrs}
+          {...styleAttrs}
           stroke="transparent"
           fill="none"
           className={c('hitbox')}
@@ -120,27 +111,5 @@ export class Seg {
         />
       </g>
     ) as SVGElement
-  }
-
-  renderTerminal(type: string | undefined | null, side: Side) {
-    if (!type)
-      return null
-    const id = `g3p-seg-${this.segId}-${side}-${type}`
-    const defs = (
-      <defs>
-        <marker
-          id={id}
-          markerWidth="10"
-          markerHeight="10"
-          refX="9"
-          refY="3"
-          orient="auto"
-          markerUnits="userSpaceOnUse"
-        >
-          <path d="M0,0 L0,6 L9,3 z" />
-        </marker>
-      </defs>
-    ) as SVGElement
-    return { id, defs }
   }
 }

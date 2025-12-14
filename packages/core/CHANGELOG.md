@@ -1,5 +1,11 @@
 # @3plate/graph-core
 
+## 0.1.3
+
+### Patch Changes
+
+- Refactor API and get demo working
+
 ## 0.1.2
 
 ### Patch Changes

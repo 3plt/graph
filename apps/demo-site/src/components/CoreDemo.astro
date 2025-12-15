@@ -1,21 +1,25 @@
 ---
-import Code from './Code.astro';
+import { examples, exampleList } from '../examples';
+import { generateCoreCode } from '../examples/codegen';
 
-const coreExample = `import { graph } from '@3plate/graph-core';
-
-await graph({
-  root: 'app',
-  nodes: ['a', 'b', 'c', 'd'],
-  edges: ['a->b', 'a->c', 'b->d', 'c->d']
-});`;
+const defaultExample = examples.diamond;
+const defaultCode = generateCoreCode(defaultExample);
 ---
 
 <div class="demo-wrapper">
-  <div class="demo-info">
-    <h3>Core Implementation</h3>
-    <p>
-      Using <code>@3plate/graph-core</code> package (vanilla JS)
-    </p>
+  <div class="demo-header">
+    <div class="demo-info">
+      <h3>Core Implementation</h3>
+      <p>Using <code>@3plate/graph-core</code> package (vanilla JS)</p>
+    </div>
+    <div class="example-selector">
+      <label for="core-example-select">Example:</label>
+      <select id="core-example-select">
+        {exampleList.map(key => (
+          <option value={key} selected={key === 'diamond'}>{examples[key].name}</option>
+        ))}
+      </select>
+    </div>
   </div>
 
   <div class="graph-container" id="core-graph-container">
@@ -23,58 +27,134 @@ await graph({
   </div>
 
   <div class="code-example">
-    <h4>Usage Example</h4>
-    <Code code={coreExample} lang="typescript" />
+    <h4>Code</h4>
+    <pre id="core-code-display"><code class="language-typescript">{defaultCode}</code></pre>
   </div>
 </div>
 
 <style>
+  .demo-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .example-selector {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .example-selector label {
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+  }
+
+  .example-selector select {
+    padding: 0.375rem 0.75rem;
+    border: 1px solid var(--color-border);
+    border-radius: 0.375rem;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-size: 0.875rem;
+    cursor: pointer;
+  }
+
   .graph-container {
     width: 100%;
-    height: 400px;
+    height: 350px;
     border: 1px solid var(--color-border);
     border-radius: 0.5rem;
     margin: 1rem 0;
     overflow: hidden;
   }
+
+  .code-example h4 {
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+  }
+
+  #core-code-display {
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    overflow-x: auto;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  #core-code-display code {
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+  }
 </style>
 
 <script>
   import { graph } from '@3plate/graph-core';
+  import { examples } from '../examples';
+  import { generateCoreCode } from '../examples/codegen';
 
-  async function initCoreDemo() {
+  let currentGraph: any = null;
+
+  async function renderExample(exampleKey: string) {
     const container = document.getElementById('core-graph-container');
+    const codeDisplay = document.getElementById('core-code-display');
     if (!container) return;
 
-    // Clear any existing content
-    container.innerHTML = '';
+    const example = examples[exampleKey];
+    if (!example) return;
 
+    // Update code display
+    if (codeDisplay) {
+      codeDisplay.innerHTML = `<code class="language-typescript">${escapeHtml(generateCoreCode(example))}</code>`;
+    }
+
+    // Clear and re-render graph
+    container.innerHTML = '';
+    
     try {
-      await graph({
+      currentGraph = await graph({
         root: 'core-graph-container',
-        nodes: ['a', 'b', 'c', 'd'],
-        edges: ['a->b', 'a->c', 'b->d', 'c->d'],
+        nodes: example.nodes as any,
+        edges: example.edges as any,
+        options: example.options as any,
       });
     } catch (e) {
-      console.error('Failed to initialize core demo:', e);
+      console.error('Failed to render example:', e);
       container.innerHTML = '<p style="padding: 2rem; color: #ef4444;">Failed to load graph</p>';
     }
   }
 
-  // Initialize when the tab becomes visible
+  function escapeHtml(text: string): string {
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
+  // Initialize
   document.addEventListener('DOMContentLoaded', () => {
+    const select = document.getElementById('core-example-select') as HTMLSelectElement;
     const coreTab = document.querySelector('[data-tab="core"]');
     const corePanel = document.querySelector('[data-panel="core"]');
-    
+
+    if (select) {
+      select.addEventListener('change', () => {
+        renderExample(select.value);
+      });
+    }
+
     if (coreTab && corePanel) {
-      // Check if already active
       if (corePanel.classList.contains('active')) {
-        initCoreDemo();
+        renderExample('diamond');
       }
       
-      // Initialize when tab is clicked
       coreTab.addEventListener('click', () => {
-        setTimeout(initCoreDemo, 100);
+        setTimeout(() => renderExample(select?.value || 'diamond'), 100);
       });
     }
   });

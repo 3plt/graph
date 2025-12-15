@@ -2,26 +2,7 @@
 import CoreDemo from './CoreDemo.astro';
 import ReactDemoAstro from './ReactDemoAstro.astro';
 import VueDemoAstro from './VueDemoAstro.astro';
-import Code from './Code.astro';
-
-const angularExample = `import { Component } from '@angular/core';
-import { GraphComponent } from '@3plate/graph-angular';
-
-@Component({
-  selector: 'app-root',
-  standalone: true,
-  imports: [GraphComponent],
-  template: \`
-    <graph
-      [nodes]="nodes"
-      [edges]="edges"
-    />
-  \`
-})
-export class AppComponent {
-  nodes = ['a', 'b', 'c', 'd'];
-  edges = ['a->b', 'a->c', 'b->d', 'c->d'];
-}`;
+import AngularDemo from './AngularDemo.astro';
 ---
 
 <section class="demo-section" id="demo">
@@ -48,20 +29,7 @@ export class AppComponent {
           <VueDemoAstro />
         </div>
         <div class="demo-panel" data-panel="angular">
-          <div class="demo-wrapper">
-            <div class="demo-info">
-              <h3>Angular Implementation</h3>
-              <p>Using <code>@3plate/graph-angular</code> package</p>
-            </div>
-            <div class="placeholder">
-              <p>Angular wrapper coming soon!</p>
-              <code>npm install @3plate/graph-angular</code>
-            </div>
-            <div class="code-example">
-              <h4>Planned Usage</h4>
-              <Code code={angularExample} lang="typescript" />
-            </div>
-          </div>
+          <AngularDemo />
         </div>
       </div>
     </div>

@@ -1,6 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import Header from '../components/Header.astro';
+import { examples, exampleList } from '../examples';
 ---
 
 <Layout title="Playground - @3plate/graph">
@@ -10,11 +11,11 @@ import Header from '../components/Header.astro';
     <div class="sidebar">
       <h2>Examples</h2>
       <div class="example-list">
-        <button class="example-btn active" data-example="simple">Simple Flow</button>
-        <button class="example-btn" data-example="ports">With Ports</button>
-        <button class="example-btn" data-example="markers">Markers</button>
-        <button class="example-btn" data-example="complex">Complex Graph</button>
-        <button class="example-btn" data-example="themed">Themed Types</button>
+        {exampleList.map((key, i) => (
+          <button class={`example-btn ${i === 0 ? 'active' : ''}`} data-example={key}>
+            {examples[key].name}
+          </button>
+        ))}
       </div>
 
       <h2>Options</h2>
@@ -173,92 +174,9 @@ import Header from '../components/Header.astro';
 
 <script>
   import { graph } from '@3plate/graph-core';
+  import { examples, exampleList } from '../examples';
 
-  const examples = {
-    simple: {
-      nodes: ['a', 'b', 'c', 'd'],
-      edges: [
-        { source: 'a', target: 'b' },
-        { source: 'a', target: 'c' },
-        { source: 'b', target: 'd' },
-        { source: 'c', target: 'd' },
-      ]
-    },
-    ports: {
-      nodes: [
-        { id: 'a', ports: { out: ['foo', 'bar'] } },
-        'b',
-        'c',
-        { id: 'd', ports: { in: ['baz', 'quux'] } },
-      ],
-      edges: [
-        { source: { id: 'a', port: 'foo' }, target: 'b' },
-        { source: { id: 'a', port: 'bar' }, target: 'c' },
-        { source: 'b', target: { id: 'd', port: 'baz' } },
-        { source: 'c', target: { id: 'd', port: 'quux' } },
-      ]
-    },
-    markers: {
-      nodes: ['a', 'b', 'c', 'd'],
-      edges: [
-        { source: { id: 'a', marker: 'arrow' }, target: { id: 'b', marker: 'arrow' } },
-        { source: { id: 'a', marker: 'circle' }, target: { id: 'c', marker: 'diamond' } },
-        { source: { id: 'b', marker: 'diamond' }, target: { id: 'd', marker: 'bar' } },
-        { source: { id: 'c', marker: 'bar' }, target: { id: 'd', marker: 'circle' } },
-      ]
-    },
-    complex: {
-      nodes: [
-        { id: 'start', ports: { out: ['a', 'b', 'c'] } },
-        { id: 'process1' },
-        { id: 'process2' },
-        { id: 'process3' },
-        { id: 'merge', ports: { in: ['x', 'y', 'z'] } },
-        { id: 'end' },
-      ],
-      edges: [
-        { source: { id: 'start', port: 'a' }, target: 'process1' },
-        { source: { id: 'start', port: 'b' }, target: 'process2' },
-        { source: { id: 'start', port: 'c' }, target: 'process3' },
-        { source: 'process1', target: { id: 'merge', port: 'x' } },
-        { source: 'process2', target: { id: 'merge', port: 'y' } },
-        { source: 'process3', target: { id: 'merge', port: 'z' } },
-        { source: 'merge', target: 'end' },
-      ]
-    },
-    themed: {
-      nodes: [
-        { id: 'input', type: 'input', title: 'Data Input' },
-        { id: 'validate', type: 'process', title: 'Validate' },
-        { id: 'transform', type: 'process', title: 'Transform' },
-        { id: 'error', type: 'error', title: 'Error Handler' },
-        { id: 'output', type: 'success', title: 'Output' },
-      ],
-      edges: [
-        { source: 'input', target: 'validate' },
-        { source: 'validate', target: 'transform' },
-        { source: 'validate', target: 'error', type: 'error' },
-        { source: 'transform', target: 'output', type: 'success' },
-        { source: 'transform', target: 'error', type: 'error' },
-      ],
-      options: {
-        canvas: {
-          nodeTypes: {
-            input: { border: '#3b82f6' },
-            process: { border: '#8b5cf6' },
-            error: { bg: '#fef2f2', border: '#ef4444', text: '#991b1b' },
-            success: { bg: '#f0fdf4', border: '#22c55e', text: '#166534' },
-          },
-          edgeTypes: {
-            error: { color: '#ef4444' },
-            success: { color: '#22c55e' },
-          },
-        }
-      }
-    }
-  };
-
-  let currentExample = 'simple';
+  let currentExample = exampleList[0];
   let currentGraph: any = null;
 
   function getOptions(exampleOptions?: any) {
@@ -280,14 +198,14 @@ import Header from '../components/Header.astro';
 
     container.innerHTML = '';
 
-    const example = examples[currentExample as keyof typeof examples] as any;
+    const example = examples[currentExample];
     const options = getOptions(example.options);
 
     try {
       currentGraph = await graph({
         root: 'playground-graph',
-        nodes: example.nodes,
-        edges: example.edges,
+        nodes: example.nodes as any,
+        edges: example.edges as any,
         options,
       });
     } catch (e) {
@@ -301,7 +219,7 @@ import Header from '../components/Header.astro';
     btn.addEventListener('click', () => {
       document.querySelectorAll('.example-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      currentExample = btn.getAttribute('data-example') || 'simple';
+      currentExample = btn.getAttribute('data-example') || exampleList[0];
       renderGraph();
     });
   });

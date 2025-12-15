@@ -30,6 +30,7 @@
     "@3plate/graph-vue": "workspace:*"
   },
   "scripts": {
+    "clean": "rm -rf dist packages/*/dist apps/*/dist",
     "build": "pnpm --filter './packages/*' build && pnpm build:self",
     "build:self": "tsup src/index.ts --format cjs,esm",
     "build:core": "pnpm --filter @3plate/graph-core build",

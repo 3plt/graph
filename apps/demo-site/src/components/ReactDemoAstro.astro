@@ -1,24 +1,25 @@
 ---
-import Code from './Code.astro';
+import { examples, exampleList } from '../examples';
+import { generateReactCode } from '../examples/codegen';
 
-const reactExample = `import { Graph } from '@3plate/graph-react';
-
-function App() {
-  return (
-    <Graph
-      nodes={['a', 'b', 'c', 'd']}
-      edges={['a->b', 'a->c', 'b->d', 'c->d']}
-    />
-  );
-}`;
+const defaultExample = examples.diamond;
+const defaultCode = generateReactCode(defaultExample);
 ---
 
 <div class="demo-wrapper">
-  <div class="demo-info">
-    <h3>React Implementation</h3>
-    <p>
-      Using <code>@3plate/graph-react</code> package
-    </p>
+  <div class="demo-header">
+    <div class="demo-info">
+      <h3>React Implementation</h3>
+      <p>Using <code>@3plate/graph-react</code> package</p>
+    </div>
+    <div class="example-selector">
+      <label for="react-example-select">Example:</label>
+      <select id="react-example-select">
+        {exampleList.map(key => (
+          <option value={key} selected={key === 'diamond'}>{examples[key].name}</option>
+        ))}
+      </select>
+    </div>
   </div>
 
   <div class="placeholder">
@@ -27,12 +28,41 @@ function App() {
   </div>
 
   <div class="code-example">
-    <h4>Planned Usage</h4>
-    <Code code={reactExample} lang="tsx" />
+    <h4>Code</h4>
+    <pre id="react-code-display"><code class="language-tsx">{defaultCode}</code></pre>
   </div>
 </div>
 
 <style>
+  .demo-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .example-selector {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .example-selector label {
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+  }
+
+  .example-selector select {
+    padding: 0.375rem 0.75rem;
+    border: 1px solid var(--color-border);
+    border-radius: 0.375rem;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-size: 0.875rem;
+    cursor: pointer;
+  }
+
   .placeholder {
     display: flex;
     flex-direction: column;
@@ -55,13 +85,47 @@ function App() {
     padding: 0.5rem 1rem;
   }
 
-  .code-example {
-    margin-top: 1.5rem;
-  }
-
   .code-example h4 {
-    margin-bottom: 0.75rem;
-    font-size: 1rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
     color: var(--color-text-muted);
   }
+
+  #react-code-display {
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    overflow-x: auto;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  #react-code-display code {
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+  }
 </style>
+
+<script>
+  import { examples } from '../examples';
+  import { generateReactCode } from '../examples/codegen';
+
+  function escapeHtml(text: string): string {
+    return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const select = document.getElementById('react-example-select') as HTMLSelectElement;
+    const codeDisplay = document.getElementById('react-code-display');
+
+    if (select && codeDisplay) {
+      select.addEventListener('change', () => {
+        const example = examples[select.value];
+        if (example) {
+          codeDisplay.innerHTML = `<code class="language-tsx">${escapeHtml(generateReactCode(example))}</code>`;
+        }
+      });
+    }
+  });
+</script>

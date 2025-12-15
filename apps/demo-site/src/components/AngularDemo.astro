@@ -1,20 +1,20 @@
 ---
 import { examples, exampleList } from '../examples';
-import { generateVueCode } from '../examples/codegen';
+import { generateAngularCode } from '../examples/codegen';
 
 const defaultExample = examples.diamond;
-const defaultCode = generateVueCode(defaultExample);
+const defaultCode = generateAngularCode(defaultExample);
 ---
 
 <div class="demo-wrapper">
   <div class="demo-header">
     <div class="demo-info">
-      <h3>Vue Implementation</h3>
-      <p>Using <code>@3plate/graph-vue</code> package</p>
+      <h3>Angular Implementation</h3>
+      <p>Using <code>@3plate/graph-angular</code> package</p>
     </div>
     <div class="example-selector">
-      <label for="vue-example-select">Example:</label>
-      <select id="vue-example-select">
+      <label for="angular-example-select">Example:</label>
+      <select id="angular-example-select">
         {exampleList.map(key => (
           <option value={key} selected={key === 'diamond'}>{examples[key].name}</option>
         ))}
@@ -23,13 +23,13 @@ const defaultCode = generateVueCode(defaultExample);
   </div>
 
   <div class="placeholder">
-    <p>Vue wrapper coming soon!</p>
-    <code>npm install @3plate/graph-vue</code>
+    <p>Angular wrapper coming soon!</p>
+    <code>npm install @3plate/graph-angular</code>
   </div>
 
   <div class="code-example">
     <h4>Code</h4>
-    <pre id="vue-code-display"><code class="language-vue">{defaultCode}</code></pre>
+    <pre id="angular-code-display"><code class="language-typescript">{defaultCode}</code></pre>
   </div>
 </div>
 
@@ -91,7 +91,7 @@ const defaultCode = generateVueCode(defaultExample);
     color: var(--color-text-muted);
   }
 
-  #vue-code-display {
+  #angular-code-display {
     background: var(--color-bg-secondary);
     border: 1px solid var(--color-border);
     border-radius: 0.5rem;
@@ -102,28 +102,28 @@ const defaultCode = generateVueCode(defaultExample);
     margin: 0;
   }
 
-  #vue-code-display code {
+  #angular-code-display code {
     font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
   }
 </style>
 
 <script>
   import { examples } from '../examples';
-  import { generateVueCode } from '../examples/codegen';
+  import { generateAngularCode } from '../examples/codegen';
 
   function escapeHtml(text: string): string {
     return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
   document.addEventListener('DOMContentLoaded', () => {
-    const select = document.getElementById('vue-example-select') as HTMLSelectElement;
-    const codeDisplay = document.getElementById('vue-code-display');
+    const select = document.getElementById('angular-example-select') as HTMLSelectElement;
+    const codeDisplay = document.getElementById('angular-code-display');
 
     if (select && codeDisplay) {
       select.addEventListener('change', () => {
         const example = examples[select.value];
         if (example) {
-          codeDisplay.innerHTML = `<code class="language-vue">${escapeHtml(generateVueCode(example))}</code>`;
+          codeDisplay.innerHTML = `<code class="language-typescript">${escapeHtml(generateAngularCode(example))}</code>`;
         }
       });
     }

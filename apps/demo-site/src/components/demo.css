@@ -89,9 +89,13 @@
   font-family: 'Courier New', Courier, monospace;
   font-size: 0.875rem;
   line-height: 1.6;
-  color: var(--color-text);
   background: transparent;
   padding: 0;
+}
+
+/* Don't override Shiki's syntax highlighting colors */
+.code-example .shiki code {
+  color: inherit;
 }
 
 @media (max-width: 768px) {

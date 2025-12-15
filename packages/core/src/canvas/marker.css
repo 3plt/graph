@@ -1,11 +1,11 @@
 .g3p-marker {
-  fill: var(--g3p-edge-color);
+  fill: context-stroke;
   stroke: none;
 }
 
 .g3p-marker-bar {
   fill: none;
-  stroke: var(--g3p-edge-color);
+  stroke: context-stroke;
   stroke-width: 2;
 }
 

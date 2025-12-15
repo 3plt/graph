@@ -13,13 +13,23 @@ const defaultCode = generateVueCode(defaultExample);
       <h3>Vue Implementation</h3>
       <p>Using <code>@3plate/graph-vue</code> package</p>
     </div>
-    <div class="example-selector">
-      <label for="vue-example-select">Example:</label>
-      <select id="vue-example-select">
-        {exampleList.map(key => (
-          <option value={key} selected={key === 'diamond'}>{examples[key].name}</option>
-        ))}
-      </select>
+    <div class="demo-controls">
+      <div class="control-group">
+        <label for="vue-example-select">Example:</label>
+        <select id="vue-example-select">
+          {exampleList.map(key => (
+            <option value={key} selected={key === 'diamond'}>{examples[key].name}</option>
+          ))}
+        </select>
+      </div>
+      <div class="control-group">
+        <label for="vue-color-mode">Theme:</label>
+        <select id="vue-color-mode" data-color-mode-select>
+          <option value="system">System</option>
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+        </select>
+      </div>
     </div>
   </div>
 
@@ -45,18 +55,24 @@ const defaultCode = generateVueCode(defaultExample);
     gap: 1rem;
   }
 
-  .example-selector {
+  .demo-controls {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+  }
+
+  .control-group {
     display: flex;
     align-items: center;
     gap: 0.5rem;
   }
 
-  .example-selector label {
+  .control-group label {
     font-size: 0.875rem;
     color: var(--color-text-muted);
   }
 
-  .example-selector select {
+  .control-group select {
     padding: 0.375rem 0.75rem;
     border: 1px solid var(--color-border);
     border-radius: 0.375rem;
@@ -114,10 +130,12 @@ const defaultCode = generateVueCode(defaultExample);
   import { examples } from '../examples';
   import { generateVueCode } from '../examples/codegen';
   import { highlightCode } from '../utils/highlighter';
+  import { setColorMode, syncColorModeSelects, type ColorMode } from '../utils/demoState';
 
   document.addEventListener('DOMContentLoaded', () => {
     const select = document.getElementById('vue-example-select') as HTMLSelectElement;
     const codeDisplay = document.getElementById('vue-code-display');
+    const colorModeSelect = document.getElementById('vue-color-mode') as HTMLSelectElement;
 
     if (select && codeDisplay) {
       select.addEventListener('change', async () => {
@@ -127,6 +145,13 @@ const defaultCode = generateVueCode(defaultExample);
           const highlighted = await highlightCode(code, 'vue');
           codeDisplay.innerHTML = `<div class="code-block">${highlighted}</div>`;
         }
+      });
+    }
+
+    if (colorModeSelect) {
+      colorModeSelect.addEventListener('change', () => {
+        setColorMode(colorModeSelect.value as ColorMode);
+        syncColorModeSelects();
       });
     }
   });

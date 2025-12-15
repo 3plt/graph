@@ -52,43 +52,13 @@ const highlighted = await codeToHtml(code.trim(), {
     background-color: transparent !important;
   }
 
-  /* Light/dark mode switching - only apply bg to the pre element */
+  /* Always use dark theme for code blocks */
   .code-block pre.shiki {
-    color: var(--shiki-light) !important;
-    background-color: var(--shiki-light-bg) !important;
-  }
-
-  .code-block .shiki span {
-    color: var(--shiki-light) !important;
-  }
-
-  @media (prefers-color-scheme: dark) {
-    .code-block pre.shiki {
-      color: var(--shiki-dark) !important;
-      background-color: var(--shiki-dark-bg) !important;
-    }
-
-    .code-block .shiki span {
-      color: var(--shiki-dark) !important;
-    }
-  }
-
-  /* Override for explicit color mode classes */
-  .g3p-light .code-block pre.shiki {
-    color: var(--shiki-light) !important;
-    background-color: var(--shiki-light-bg) !important;
-  }
-
-  .g3p-light .code-block .shiki span {
-    color: var(--shiki-light) !important;
-  }
-
-  .g3p-dark .code-block pre.shiki {
-    color: var(--shiki-dark) !important;
     background-color: var(--shiki-dark-bg) !important;
   }
 
-  .g3p-dark .code-block .shiki span {
+  .code-block .shiki,
+  .code-block .shiki span {
     color: var(--shiki-dark) !important;
   }
 </style>

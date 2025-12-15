@@ -42,3 +42,102 @@
   stroke: #cbd5e1;
   stroke-dasharray: 3, 3;
 }
+
+/* Port container styles */
+.g3p-node-ports {
+  display: flex;
+  gap: 4px;
+}
+
+.g3p-node-ports-row {
+  flex-direction: row;
+  justify-content: center;
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+.g3p-node-ports-col {
+  flex-direction: column;
+  justify-content: center;
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+/* Port styles */
+.g3p-node-port {
+  background: #e2e8f0;
+  border: 1px solid #cbd5e1;
+  padding: 2px 6px;
+  font-size: 0.5em;
+  color: #475569;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.g3p-node-port:hover {
+  background: #cbd5e1;
+  border-color: #94a3b8;
+}
+
+.g3p-node-port-rotated-left {
+  writing-mode: vertical-lr;
+}
+
+.g3p-node-port-rotated-right {
+  writing-mode: vertical-rl;
+}
+
+/* Outside ports: rounded corners away from the node rectangle, no border on touching side */
+.g3p-node-port-out-top {
+  border-radius: 4px 4px 0 0;
+  border-bottom: none;
+}
+
+.g3p-node-port-out-bottom {
+  border-radius: 0 0 4px 4px;
+  border-top: none;
+}
+
+.g3p-node-port-out-left {
+  border-radius: 4px 0 0 4px;
+  border-right: none;
+}
+
+.g3p-node-port-out-right {
+  border-radius: 0 4px 4px 0;
+  border-left: none;
+}
+
+/* Inside ports: rounded corners toward the content, no border on outer edge */
+.g3p-node-port-in-top {
+  border-radius: 0 0 4px 4px;
+  border-top: none;
+}
+
+.g3p-node-port-in-bottom {
+  border-radius: 4px 4px 0 0;
+  border-bottom: none;
+}
+
+.g3p-node-port-in-left {
+  border-radius: 0 4px 4px 0;
+  border-left: none;
+}
+
+.g3p-node-port-in-right {
+  border-radius: 4px 0 0 4px;
+  border-right: none;
+}
+
+/* Port wrapper */
+.g3p-node-with-ports {
+  display: flex;
+}
+
+.g3p-node-with-ports-v {
+  flex-direction: column;
+}
+
+.g3p-node-with-ports-h {
+  flex-direction: row;
+}

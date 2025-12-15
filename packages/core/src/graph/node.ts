@@ -14,6 +14,8 @@ export type NodeKey = string
 export type PortData = {
   id: string,
   label?: string,
+  offset?: number,
+  size?: number,
 }
 
 export type PublicNodeData = {
@@ -132,7 +134,7 @@ export class Node extends Record(defNodeData) {
     return node
   }
 
-  static del(g: Graph, node: PublicNodeData): null {
+  static del(g: Graph, node: { id: string }): null {
     return g.getNode(node.id).delSelf(g)
   }
 

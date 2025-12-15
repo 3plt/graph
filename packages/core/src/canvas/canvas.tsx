@@ -1,4 +1,4 @@
-import { Pos } from '../common'
+import { Pos, Orientation } from '../common'
 import { Node } from './node'
 import { Seg } from './seg'
 import { Dims } from '../common'
@@ -27,6 +27,7 @@ type Bounds = {
 type CanvasData = Required<CanvasOptions<any>> & {
   renderNode: RenderNode<any>
   dummyNodeSize: number
+  orientation: Orientation
 }
 
 export interface Canvas extends CanvasData { }
@@ -78,7 +79,7 @@ export class Canvas {
     let bx1 = -Infinity, by1 = -Infinity
     for (const node of this.curNodes.values()) {
       const { x, y } = node.pos!
-      const { w, h } = node.dims!
+      const { w, h } = node.data!.dims!
       const nx0 = x, nx1 = x + w
       const ny0 = y, ny1 = y + h
       bx0 = Math.min(bx0, nx0)
@@ -143,27 +144,24 @@ export class Canvas {
     seg.remove()
   }
 
-  async measureNodes(nodes: PublicNodeData[]) {
-    const newNodes: Node[] = []
+  async measureNodes(nodes: PublicNodeData[]): Promise<Map<any, Node>> {
+    const newNodes: Map<any, Node> = new Map()
     for (const data of nodes) {
       const node = new Node(this, data)
-      newNodes.push(node)
+      newNodes.set(data.data, node)
       this.measurement!.appendChild(node.content)
     }
     await new Promise(requestAnimationFrame)
-    for (const node of newNodes) {
-      const rect = node.content.getBoundingClientRect()
-      node.setDims({ w: rect.width, h: rect.height })
-      node.renderContainer()
+    const isVertical = this.orientation === 'TB' || this.orientation === 'BT'
+    for (const node of newNodes.values()) {
+      node.measure(isVertical)
       const { id, version } = node.data!
       const key = `${id}:${version}`
       this.allNodes.set(key, node)
+      node.renderContainer()
     }
     this.measurement!.innerHTML = ''
-  }
-
-  getDims(key: NodeKey) {
-    return this.getNode(key).dims!
+    return newNodes
   }
 
   private onClick(e: MouseEvent) {

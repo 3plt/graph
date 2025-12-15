@@ -182,15 +182,26 @@ export class Layout {
   }
 
   static nodePortOffset(g: Graph, nodeId: NodeId, seg: Seg, side: Side) {
-    // TODO: figure out how user passes in port positions
     const node = g.getNode(nodeId)
     const dir = side == 'source' ? 'out' : 'in'
+    const portId = seg[side].port
+    let min = 0, size = node.dims?.[g.w] ?? 0
+
+    if (portId) {
+      const ports = node.ports?.[dir]
+      const port = ports?.find(p => p.id === portId)
+      if (port?.offset !== undefined) {
+        min = port.offset
+        size = port.size ?? 0
+      }
+    }
+
     const alt = side == 'source' ? 'target' : 'source'
     let segs = []
     const keyOf = (seg: Seg) => `${seg.type ?? ''}:${seg[side].marker ?? ''}`
     for (const segId of node.segs[dir])
       segs.push(g.getSeg(segId))
-    if (seg[side].port) segs = segs.filter(s => s[side].port == seg[side].port)
+    if (portId) segs = segs.filter(s => s[side].port == portId)
     const groups = Object.groupBy(segs, s => keyOf(s))
     const posMap = new Map()
     for (const [key, segs] of Object.entries(groups)) {
@@ -199,9 +210,9 @@ export class Layout {
       posMap.set(key, pos)
     }
     const keys = [...posMap.keys()].sort((a, b) => posMap.get(a)! - posMap.get(b)!)
-    const gap = (node.dims?.[g.w] ?? 0) / (keys.length + 1)
+    const gap = size / (keys.length + 1)
     const index = keys.indexOf(keyOf(seg))
-    return (index + 1) * gap
+    return min + (index + 1) * gap
   }
 
   static shiftNode(

@@ -4,7 +4,8 @@ import { PublicEdgeData } from '../graph/edge'
 import { Mutator } from '../graph/mutator'
 import { APIArguments, Update, NodeProps, EdgeProps, EdgeEnd } from './options'
 import { Defaults, applyDefaults } from './defaults'
-import { PublicNodeData, NodeKey, Node } from '../graph/node'
+import { PublicNodeData } from '../graph/node'
+import { Node } from '../canvas/node'
 import { Nav, Dir } from '../common'
 import { Updater } from './updater'
 import { logger } from '../log'
@@ -33,7 +34,6 @@ export class API<N, E> {
   constructor(args: APIArguments<N, E>) {
     this.root = args.root
     this.options = applyDefaults(args.options)
-    log.info('options', this.options)
 
     // build initial empty graph
     let graph = new Graph({ options: this.options.graph })
@@ -50,6 +50,7 @@ export class API<N, E> {
     this.canvas = new Canvas({
       ...this.options.canvas,
       dummyNodeSize: this.options.graph.dummyNodeSize,
+      orientation: this.options.graph.orientation,
     })
 
     // store initial update or history
@@ -153,7 +154,7 @@ export class API<N, E> {
   async applyUpdate(update: Update<N, E>) {
     log.info('applyUpdate', update)
     // create nodes in canvas and wait for their measurements
-    await this.measureNodes(update)
+    const nodes = await this.measureNodes(update)
     // apply updates to get a new version of the graph
     const graph = this.state.graph!.withMutations((mut: Mutator) => {
       for (const edge of update.removeEdges ?? [])
@@ -161,9 +162,9 @@ export class API<N, E> {
       for (const node of update.removeNodes ?? [])
         this._removeNode(node, mut)
       for (const node of update.addNodes ?? [])
-        this._addNode(node, mut)
+        this._addNode(nodes.get(node)!, mut)
       for (const node of update.updateNodes ?? [])
-        this._updateNode(node, mut)
+        this._updateNode(nodes.get(node)!, mut)
       for (const edge of update.addEdges ?? [])
         this._addEdge(edge, mut)
       for (const edge of update.updateEdges ?? [])
@@ -192,16 +193,12 @@ export class API<N, E> {
     await this.applyUpdate(updater.update)
   }
 
-  private async measureNodes(update: Update<N, E>) {
+  private async measureNodes(update: Update<N, E>): Promise<Map<N, Node>> {
     const data: PublicNodeData[] = []
     for (const set of [update.updateNodes, update.addNodes])
       for (const node of set ?? [])
         data.push(this.parseNode(node, true))
-    await this.canvas.measureNodes(data)
-  }
-
-  private getDims(key: NodeKey) {
-    return this.canvas.getDims(key)
+    return await this.canvas.measureNodes(data)
   }
 
   private parseNode(data: N, bumpVersion: boolean = false): PublicNodeData {
@@ -216,13 +213,10 @@ export class API<N, E> {
     id ??= this.getNodeId(data)
     const ports = this.parsePorts(props.ports)
     let version = this.nodeVersions.get(data)
-    const isNew = !version
     if (!version) version = 1
     else if (bumpVersion) version++
     this.nodeVersions.set(data, version)
-    const dims = isNew ? undefined : this.getDims(`${id}:${version}`)
-    const node = { id, data, ports, title, text, style, render, dims, version }
-    return node
+    return { id, data, ports, title, text, style, render, version }
   }
 
   private parseEdge(data: E): PublicEdgeData {
@@ -295,27 +289,28 @@ export class API<N, E> {
     return id
   }
 
-  private _addNode(node: any, mut: Mutator) {
-    const data = this.parseNode(node)
-    const id = this.nodeIds.get(node)
-    if (id && id != data.id)
-      throw new Error(`node id changed from ${id} to ${data.id}`)
-    this.nodeIds.set(node, data.id)
-    mut.addNode(data)
+  private _addNode(node: Node, mut: Mutator) {
+    const { data, id: newId } = node.data!
+    const oldId = this.nodeIds.get(data)
+    console.log('addNode', node, oldId, newId)
+    if (oldId && oldId != newId)
+      throw new Error(`node id of ${data} changed from ${oldId} to ${newId}`)
+    this.nodeIds.set(data, newId)
+    mut.addNode(node.data!)
   }
 
   private _removeNode(node: any, mut: Mutator) {
     const id = this.nodeIds.get(node)
     if (!id) throw new Error(`removing node ${node} which does not exist`)
-    mut.removeNode(this.parseNode(node))
+    mut.removeNode({ id })
   }
 
-  private _updateNode(node: N, mut: Mutator) {
-    const id = this.nodeIds.get(node)
-    if (!id) throw new Error(`updating unknown node ${node}`)
-    const data = this.parseNode(node)
-    if (data.id !== id) throw new Error(`node id changed from ${id} to ${data.id}`)
-    mut.updateNode(data)
+  private _updateNode(node: Node, mut: Mutator) {
+    const { data, id: newId } = node.data!
+    const oldId = this.nodeIds.get(data)
+    if (!oldId) throw new Error(`updating unknown node ${node}`)
+    if (oldId != newId) throw new Error(`node id changed from ${oldId} to ${newId}`)
+    mut.updateNode(node.data!)
   }
 
   private _addEdge(edge: any, mut: Mutator) {

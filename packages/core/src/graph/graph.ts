@@ -20,10 +20,10 @@ type GraphArgs = {
 
 export type Changes = {
   addedNodes: PublicNodeData[],
-  removedNodes: PublicNodeData[],
+  removedNodes: { id: string }[],
   updatedNodes: PublicNodeData[],
   addedEdges: PublicEdgeData[],
-  removedEdges: PublicEdgeData[],
+  removedEdges: { id: string }[],
   updatedEdges: PublicEdgeData[],
   description?: string,
 }
@@ -225,13 +225,13 @@ export class Graph {
     })
   }
 
-  removeNodes(...nodes: PublicNodeData[]) {
+  removeNodes(...nodes: { id: string }[]) {
     return this.withMutations(mutator => {
       nodes.forEach(node => mutator.removeNode(node))
     })
   }
 
-  removeNode(node: PublicNodeData) {
+  removeNode(node: { id: string }) {
     return this.withMutations(mutator => {
       mutator.removeNode(node)
     })

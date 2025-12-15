@@ -70,7 +70,7 @@ export class Seg extends Record(defSegData) {
   sameEnd(other: Seg, side: Side): boolean {
     const mine = this[side]
     const yours = other[side]
-    return mine.id === yours.id && mine.port === yours.port
+    return mine.id === yours.id && mine.port === yours.port && mine.marker === yours.marker
   }
 
   setPos(g: Graph, source: number, target: number): Seg {

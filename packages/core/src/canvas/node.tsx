@@ -1,4 +1,4 @@
-import { Dims, Pos } from '../common'
+import { Dims, Pos, Orientation, Dir } from '../common'
 import { Canvas } from './canvas'
 import { PublicNodeData } from '../graph/node'
 import { logger } from '../log'
@@ -18,7 +18,6 @@ export class Node {
   canvas: Canvas
   data?: PublicNodeData
   classPrefix: string
-  dims?: Dims
   isDummy: boolean
   pos?: Pos
 
@@ -32,7 +31,6 @@ export class Node {
 
     if (this.isDummy) {
       const size = canvas.dummyNodeSize
-      this.dims = { w: size, h: size }
     } else {
       const render = data!.render ?? canvas.renderNode
       this.content = this.renderContent(render(data!.data))
@@ -53,10 +51,6 @@ export class Node {
 
   needsContainerSize(): boolean {
     return !this.isDummy
-  }
-
-  setDims(dims: Dims) {
-    this.dims = dims
   }
 
   handleClick(e: MouseEvent) {
@@ -93,8 +87,8 @@ export class Node {
     this.container!.setAttribute('transform', `translate(${x}, ${y})`)
   }
 
-  styleAttr(key: string): string | number | undefined {
-    return this.style(key) as string | number | undefined
+  styleAttr(key: string, def?: string | number): string | number | undefined {
+    return this.style(key, def) as string | number | undefined
   }
 
   styleBool(key: string, def?: boolean): boolean {
@@ -122,17 +116,19 @@ export class Node {
   }
 
   renderContent(el: HTMLElement): HTMLElement {
-    if (this.hasPorts() && this.styleAttr('portStyle') == 'inside')
+    const hasPorts = this.hasPorts()
+    const portStyle = this.styleAttr('portStyle', 'outside')
+    if (hasPorts && portStyle == 'inside')
       el = this.renderInsidePorts(el)
     if (this.styleBool('border.draw', true))
       el = this.renderBorder(el)
-    if (this.hasPorts() && this.styleAttr('portStyle') == 'outside')
+    if (hasPorts && portStyle == 'outside')
       el = this.renderOutsidePorts(el)
     return el
   }
 
   renderContainer() {
-    const c = styler('node', styles, this.canvas.classPrefix)
+    const c = styler('node', styles, this.classPrefix)
     const hasPorts = this.hasPorts()
     const inner = this.isDummy ? this.renderDummy() : this.renderForeign()
     this.container = (
@@ -152,7 +148,7 @@ export class Node {
   }
 
   renderForeign(): SVGElement {
-    const { w, h } = this.dims!
+    const { w, h } = this.data!.dims!
     return (
       <foreignObject width={w} height={h}>
         {this.content}
@@ -161,8 +157,9 @@ export class Node {
   }
 
   renderDummy(): SVGElement {
-    const c = styler('node', styles, this.canvas.classPrefix)
-    let { w, h } = this.dims!
+    const c = styler('node', styles, this.classPrefix)
+    let w = this.canvas.dummyNodeSize
+    let h = this.canvas.dummyNodeSize
     const s = this.styleAttr('border.size')
     w /= 2
     h /= 2
@@ -180,16 +177,120 @@ export class Node {
     </g>) as SVGElement
   }
 
+  measure(isVertical: boolean) {
+    const rect = this.content.getBoundingClientRect()
+    const data = this.data!
+    data.dims = { w: rect.width, h: rect.height }
+    for (const dir of ['in', 'out'] as const) {
+      const ports = data.ports?.[dir]
+      if (!ports) continue
+      for (const port of ports) {
+        const el = this.content.querySelector(`#g3p-port-${data.id}-${port.id}`)
+        if (!el) continue
+        const portRect = el.getBoundingClientRect()
+        if (isVertical) {
+          port.offset = portRect.left - rect.left
+          port.size = portRect.width
+        } else {
+          port.offset = portRect.top - rect.top
+          port.size = portRect.height
+        }
+      }
+    }
+  }
+
+  private getPortPosition(dir: Dir): 'top' | 'bottom' | 'left' | 'right' {
+    const o = this.canvas.orientation
+    if (dir === 'in') {
+      if (o === 'TB') return 'top'
+      if (o === 'BT') return 'bottom'
+      if (o === 'LR') return 'left'
+      return 'right' // RL
+    } else {
+      if (o === 'TB') return 'bottom'
+      if (o === 'BT') return 'top'
+      if (o === 'LR') return 'right'
+      return 'left' // RL
+    }
+  }
+
+  private isVerticalOrientation(): boolean {
+    const o = this.canvas.orientation
+    return o === 'TB' || o === 'BT'
+  }
+
+  private isReversedOrientation(): boolean {
+    const o = this.canvas.orientation
+    return o === 'BT' || o === 'RL'
+  }
+
+  private renderPortRow(dir: Dir, inout: Dir): HTMLElement | null {
+    const ports = this.data?.ports?.[dir]
+    if (!ports?.length) return null
+
+    const c = styler('node', styles, this.classPrefix)
+    const pos = this.getPortPosition(dir)
+    const isVertical = this.isVerticalOrientation()
+    const layoutClass = isVertical ? 'row' : 'col'
+    const rotateLabels = !isVertical && this.styleBool('portLabelRotate', false)
+    const rotateClass = rotateLabels ? `port-rotated-${pos}` : ''
+
+    return (
+      <div className={`${c('ports')} ${c(`ports-${layoutClass}`)}`}>
+        {ports.map(port => (
+          <div
+            id={`g3p-port-${this.data!.id}-${port.id}`}
+            className={`${c('port')} ${c(`port-${inout}-${pos}`)} ${c(rotateClass)}`}
+          >
+            {port.label ?? port.id}
+          </div>
+        ))}
+      </div>
+    ) as HTMLElement
+  }
+
   renderInsidePorts(el: HTMLElement): HTMLElement {
-    return el
+    const c = styler('node', styles, this.classPrefix)
+    const isVertical = this.isVerticalOrientation()
+    const isReversed = this.isReversedOrientation()
+    let inPorts = this.renderPortRow('in', 'in')
+    let outPorts = this.renderPortRow('out', 'in')
+
+    if (!inPorts && !outPorts) return el
+    if (isReversed) [inPorts, outPorts] = [outPorts, inPorts]
+    const wrapperClass = isVertical ? 'v' : 'h'
+
+    return (
+      <div className={`${c('with-ports')} ${c(`with-ports-${wrapperClass}`)}`}>
+        {inPorts}
+        {el}
+        {outPorts}
+      </div>
+    ) as HTMLElement
   }
 
   renderOutsidePorts(el: HTMLElement): HTMLElement {
-    return el
+    const c = styler('node', styles, this.classPrefix)
+    const isVertical = this.isVerticalOrientation()
+    const isReversed = this.isReversedOrientation()
+    let inPorts = this.renderPortRow('in', 'out')
+    let outPorts = this.renderPortRow('out', 'out')
+
+    if (!inPorts && !outPorts) return el
+    if (isReversed) [inPorts, outPorts] = [outPorts, inPorts]
+    const wrapperClass = isVertical ? 'v' : 'h'
+
+    return (
+      <div className={`${c('with-ports')} ${c(`with-ports-${wrapperClass}`)}`}>
+        {inPorts}
+        {el}
+        {outPorts}
+      </div>
+    ) as HTMLElement
   }
 
   renderBorder(el: HTMLElement): HTMLElement {
-    const c = styler('node', styles, this.canvas.classPrefix)
+    const c = styler('node', styles, this.classPrefix)
     const r = this.styleAttr('border.radius')
     const s = this.styleAttr('border.size')
     return <div

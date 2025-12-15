@@ -28,11 +28,11 @@ export class Mutator {
     nodes.forEach(node => this.addNode(node))
   }
 
-  removeNode(node: PublicNodeData) {
+  removeNode(node: { id: string }) {
     this.changes.removedNodes.push(node)
   }
 
-  removeNodes(...nodes: PublicNodeData[]) {
+  removeNodes(...nodes: { id: string }[]) {
     nodes.forEach(node => this.removeNode(node))
   }
 

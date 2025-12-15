@@ -45,7 +45,6 @@ export type CanvasOptions<N> = {
   height?: number | string
   nodeStyle?: NodeStyle
   edgeStyle?: EdgeStyle
-  portStyle?: PortStyle
   classPrefix?: string
   markerSize?: number
   editable?: boolean

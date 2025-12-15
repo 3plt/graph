@@ -45,7 +45,6 @@ function defaults<N, E>(): Defaults<N, E> {
       renderNode,
       nodeStyle: {},
       edgeStyle: {},
-      portStyle: 'outside',
       classPrefix: 'g3p',
       width: '100%',
       height: '100%',

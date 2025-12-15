@@ -158,7 +158,7 @@ export class Edge extends Record(defEdgeData) {
     return edge
   }
 
-  static del(g: Graph, data: PublicEdgeData): null {
+  static del(g: Graph, data: { id: string }): null {
     return g.getEdge(data.id).delSelf(g)
   }
 

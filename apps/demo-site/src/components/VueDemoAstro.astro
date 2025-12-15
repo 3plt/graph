@@ -1,6 +1,7 @@
 ---
 import { examples, exampleList } from '../examples';
 import { generateVueCode } from '../examples/codegen';
+import Code from './Code.astro';
 
 const defaultExample = examples.diamond;
 const defaultCode = generateVueCode(defaultExample);
@@ -29,7 +30,9 @@ const defaultCode = generateVueCode(defaultExample);
 
   <div class="code-example">
     <h4>Code</h4>
-    <pre id="vue-code-display"><code class="language-vue">{defaultCode}</code></pre>
+    <div id="vue-code-display">
+      <Code code={defaultCode} lang="typescript" />
+    </div>
   </div>
 </div>
 
@@ -110,20 +113,19 @@ const defaultCode = generateVueCode(defaultExample);
 <script>
   import { examples } from '../examples';
   import { generateVueCode } from '../examples/codegen';
-
-  function escapeHtml(text: string): string {
-    return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  }
+  import { highlightCode } from '../utils/highlighter';
 
   document.addEventListener('DOMContentLoaded', () => {
     const select = document.getElementById('vue-example-select') as HTMLSelectElement;
     const codeDisplay = document.getElementById('vue-code-display');
 
     if (select && codeDisplay) {
-      select.addEventListener('change', () => {
+      select.addEventListener('change', async () => {
         const example = examples[select.value];
         if (example) {
-          codeDisplay.innerHTML = `<code class="language-vue">${escapeHtml(generateVueCode(example))}</code>`;
+          const code = generateVueCode(example);
+          const highlighted = await highlightCode(code, 'vue');
+          codeDisplay.innerHTML = `<div class="code-block">${highlighted}</div>`;
         }
       });
     }

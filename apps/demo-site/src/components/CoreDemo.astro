@@ -1,6 +1,7 @@
 ---
 import { examples, exampleList } from '../examples';
 import { generateCoreCode } from '../examples/codegen';
+import Code from './Code.astro';
 
 const defaultExample = examples.diamond;
 const defaultCode = generateCoreCode(defaultExample);
@@ -28,7 +29,9 @@ const defaultCode = generateCoreCode(defaultExample);
 
   <div class="code-example">
     <h4>Code</h4>
-    <pre id="core-code-display"><code class="language-typescript">{defaultCode}</code></pre>
+    <div id="core-code-display">
+      <Code code={defaultCode} lang="typescript" />
+    </div>
   </div>
 </div>
 
@@ -97,6 +100,7 @@ const defaultCode = generateCoreCode(defaultExample);
   import { graph } from '@3plate/graph-core';
   import { examples } from '../examples';
   import { generateCoreCode } from '../examples/codegen';
+  import { highlightCode } from '../utils/highlighter';
 
   let currentGraph: any = null;
 
@@ -108,9 +112,11 @@ const defaultCode = generateCoreCode(defaultExample);
     const example = examples[exampleKey];
     if (!example) return;
 
-    // Update code display
+    // Update code display with syntax highlighting
     if (codeDisplay) {
-      codeDisplay.innerHTML = `<code class="language-typescript">${escapeHtml(generateCoreCode(example))}</code>`;
+      const code = generateCoreCode(example);
+      const highlighted = await highlightCode(code, 'typescript');
+      codeDisplay.innerHTML = `<div class="code-block">${highlighted}</div>`;
     }
 
     // Clear and re-render graph
@@ -127,13 +133,6 @@ const defaultCode = generateCoreCode(defaultExample);
       console.error('Failed to render example:', e);
       container.innerHTML = '<p style="padding: 2rem; color: #ef4444;">Failed to load graph</p>';
     }
-  }
-
-  function escapeHtml(text: string): string {
-    return text
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
   }
 
   // Initialize

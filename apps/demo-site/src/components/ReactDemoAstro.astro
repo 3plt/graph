@@ -1,6 +1,7 @@
 ---
 import { examples, exampleList } from '../examples';
 import { generateReactCode } from '../examples/codegen';
+import Code from './Code.astro';
 
 const defaultExample = examples.diamond;
 const defaultCode = generateReactCode(defaultExample);
@@ -29,7 +30,9 @@ const defaultCode = generateReactCode(defaultExample);
 
   <div class="code-example">
     <h4>Code</h4>
-    <pre id="react-code-display"><code class="language-tsx">{defaultCode}</code></pre>
+    <div id="react-code-display">
+      <Code code={defaultCode} lang="tsx" />
+    </div>
   </div>
 </div>
 
@@ -110,20 +113,19 @@ const defaultCode = generateReactCode(defaultExample);
 <script>
   import { examples } from '../examples';
   import { generateReactCode } from '../examples/codegen';
-
-  function escapeHtml(text: string): string {
-    return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  }
+  import { highlightCode } from '../utils/highlighter';
 
   document.addEventListener('DOMContentLoaded', () => {
     const select = document.getElementById('react-example-select') as HTMLSelectElement;
     const codeDisplay = document.getElementById('react-code-display');
 
     if (select && codeDisplay) {
-      select.addEventListener('change', () => {
+      select.addEventListener('change', async () => {
         const example = examples[select.value];
         if (example) {
-          codeDisplay.innerHTML = `<code class="language-tsx">${escapeHtml(generateReactCode(example))}</code>`;
+          const code = generateReactCode(example);
+          const highlighted = await highlightCode(code, 'tsx');
+          codeDisplay.innerHTML = `<div class="code-block">${highlighted}</div>`;
         }
       });
     }

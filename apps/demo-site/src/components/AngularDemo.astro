@@ -1,6 +1,7 @@
 ---
 import { examples, exampleList } from '../examples';
 import { generateAngularCode } from '../examples/codegen';
+import Code from './Code.astro';
 
 const defaultExample = examples.diamond;
 const defaultCode = generateAngularCode(defaultExample);
@@ -29,7 +30,9 @@ const defaultCode = generateAngularCode(defaultExample);
 
   <div class="code-example">
     <h4>Code</h4>
-    <pre id="angular-code-display"><code class="language-typescript">{defaultCode}</code></pre>
+    <div id="angular-code-display">
+      <Code code={defaultCode} lang="typescript" />
+    </div>
   </div>
 </div>
 
@@ -110,20 +113,19 @@ const defaultCode = generateAngularCode(defaultExample);
 <script>
   import { examples } from '../examples';
   import { generateAngularCode } from '../examples/codegen';
-
-  function escapeHtml(text: string): string {
-    return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  }
+  import { highlightCode } from '../utils/highlighter';
 
   document.addEventListener('DOMContentLoaded', () => {
     const select = document.getElementById('angular-example-select') as HTMLSelectElement;
     const codeDisplay = document.getElementById('angular-code-display');
 
     if (select && codeDisplay) {
-      select.addEventListener('change', () => {
+      select.addEventListener('change', async () => {
         const example = examples[select.value];
         if (example) {
-          codeDisplay.innerHTML = `<code class="language-typescript">${escapeHtml(generateAngularCode(example))}</code>`;
+          const code = generateAngularCode(example);
+          const highlighted = await highlightCode(code, 'angular');
+          codeDisplay.innerHTML = `<div class="code-block">${highlighted}</div>`;
         }
       });
     }

@@ -1,9 +1,5 @@
 ---
-import Prism from 'prismjs';
-import 'prismjs/components/prism-typescript';
-import 'prismjs/components/prism-jsx';
-import 'prismjs/components/prism-tsx';
-import 'prismjs/components/prism-bash';
+import { codeToHtml } from 'shiki';
 
 interface Props {
   code: string;
@@ -12,118 +8,87 @@ interface Props {
 
 const { code, lang = 'typescript' } = Astro.props;
 
-const grammar = Prism.languages[lang] || Prism.languages.javascript;
-const highlighted = Prism.highlight(code.trim(), grammar, lang);
+const highlighted = await codeToHtml(code.trim(), {
+  lang,
+  themes: {
+    light: 'github-light',
+    dark: 'github-dark',
+  },
+});
 ---
 
-<pre class={`language-${lang}`}><code set:html={highlighted} /></pre>
+<div class="code-block" set:html={highlighted} />
 
 <style is:global>
-  /* Prism.js theme using CSS variables for light/dark mode */
-  code[class*="language-"],
-  pre[class*="language-"] {
-    color: var(--color-text);
-    background: none;
-    font-family: 'Fira Code', 'Consolas', 'Monaco', 'Andale Mono', 'Ubuntu Mono', monospace;
-    font-size: 0.875rem;
-    text-align: left;
-    white-space: pre;
-    word-spacing: normal;
-    word-break: normal;
-    word-wrap: normal;
-    line-height: 1.5;
-    tab-size: 2;
-    hyphens: none;
-  }
-
-  pre[class*="language-"] {
+  .code-block pre.shiki {
     padding: 1rem;
     margin: 0;
     overflow: auto;
     border-radius: 0.5rem;
-    background: var(--color-bg-code);
     border: 1px solid var(--color-border);
+    font-family: 'Fira Code', 'SF Mono', Monaco, 'Cascadia Code', monospace;
+    font-size: 0.8125rem;
+    line-height: 1.6;
+    tab-size: 2;
   }
 
-  :not(pre) > code[class*="language-"] {
-    padding: 0.1em;
-    border-radius: 0.3em;
-    white-space: normal;
-    background: var(--color-bg-code);
+  .code-block code {
+    font-family: inherit;
+    background: transparent !important;
+    display: block;
   }
 
-  .token.comment,
-  .token.block-comment,
-  .token.prolog,
-  .token.doctype,
-  .token.cdata {
-    color: var(--code-comment);
+  /* Remove default padding/margin on first line */
+  .code-block .shiki .line:first-child {
+    margin-top: 0;
+    padding-top: 0;
   }
 
-  .token.punctuation {
-    color: var(--code-punctuation);
+  /* Reset all backgrounds inside shiki to transparent */
+  .code-block .shiki code,
+  .code-block .shiki .line,
+  .code-block .shiki span {
+    background: transparent !important;
+    background-color: transparent !important;
   }
 
-  .token.tag,
-  .token.attr-name,
-  .token.namespace,
-  .token.deleted {
-    color: var(--code-tag);
+  /* Light/dark mode switching - only apply bg to the pre element */
+  .code-block pre.shiki {
+    color: var(--shiki-light) !important;
+    background-color: var(--shiki-light-bg) !important;
   }
 
-  .token.function-name,
-  .token.function {
-    color: var(--code-function);
+  .code-block .shiki span {
+    color: var(--shiki-light) !important;
   }
 
-  .token.boolean,
-  .token.number {
-    color: var(--code-boolean);
+  @media (prefers-color-scheme: dark) {
+    .code-block pre.shiki {
+      color: var(--shiki-dark) !important;
+      background-color: var(--shiki-dark-bg) !important;
+    }
+
+    .code-block .shiki span {
+      color: var(--shiki-dark) !important;
+    }
   }
 
-  .token.property,
-  .token.class-name,
-  .token.constant,
-  .token.symbol {
-    color: var(--code-property);
+  /* Override for explicit color mode classes */
+  .g3p-light .code-block pre.shiki {
+    color: var(--shiki-light) !important;
+    background-color: var(--shiki-light-bg) !important;
   }
 
-  .token.selector,
-  .token.important,
-  .token.atrule,
-  .token.keyword,
-  .token.builtin {
-    color: var(--code-keyword);
+  .g3p-light .code-block .shiki span {
+    color: var(--shiki-light) !important;
   }
 
-  .token.string,
-  .token.char,
-  .token.attr-value,
-  .token.regex,
-  .token.variable {
-    color: var(--code-string);
+  .g3p-dark .code-block pre.shiki {
+    color: var(--shiki-dark) !important;
+    background-color: var(--shiki-dark-bg) !important;
   }
 
-  .token.operator,
-  .token.entity,
-  .token.url {
-    color: var(--code-operator);
-  }
-
-  .token.important,
-  .token.bold {
-    font-weight: bold;
-  }
-
-  .token.italic {
-    font-style: italic;
-  }
-
-  .token.entity {
-    cursor: help;
-  }
-
-  .token.inserted {
-    color: var(--code-tag);
+  .g3p-dark .code-block .shiki span {
+    color: var(--shiki-dark) !important;
   }
 </style>

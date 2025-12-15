@@ -1,0 +1,314 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+---
+
+<Layout title="Playground - @3plate/graph">
+  <Header />
+  
+  <main class="playground">
+    <div class="sidebar">
+      <h2>Examples</h2>
+      <div class="example-list">
+        <button class="example-btn active" data-example="simple">Simple Flow</button>
+        <button class="example-btn" data-example="ports">With Ports</button>
+        <button class="example-btn" data-example="markers">Markers</button>
+        <button class="example-btn" data-example="complex">Complex Graph</button>
+        <button class="example-btn" data-example="themed">Themed Types</button>
+      </div>
+
+      <h2>Options</h2>
+      <div class="options">
+        <div class="option-group">
+          <label>Orientation</label>
+          <select id="orientation">
+            <option value="TB">Top to Bottom</option>
+            <option value="BT">Bottom to Top</option>
+            <option value="LR">Left to Right</option>
+            <option value="RL">Right to Left</option>
+          </select>
+        </div>
+
+        <div class="option-group">
+          <label>Port Style</label>
+          <select id="portStyle">
+            <option value="outside">Outside</option>
+            <option value="inside">Inside</option>
+          </select>
+        </div>
+
+        <div class="option-group">
+          <label>
+            <input type="checkbox" id="portLabelRotate" />
+            Rotate Port Labels
+          </label>
+        </div>
+      </div>
+
+      <button class="apply-btn" id="apply-options">Apply Changes</button>
+    </div>
+
+    <div class="graph-area">
+      <div class="graph-container" id="playground-graph"></div>
+    </div>
+  </main>
+</Layout>
+
+<style>
+  .playground {
+    display: flex;
+    height: calc(100vh - 60px);
+  }
+
+  .sidebar {
+    width: 280px;
+    background: var(--color-bg);
+    border-right: 1px solid var(--color-border);
+    padding: 1.5rem;
+    overflow-y: auto;
+  }
+
+  .sidebar h2 {
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-text-muted);
+    margin-bottom: 0.75rem;
+    margin-top: 1.5rem;
+  }
+
+  .sidebar h2:first-child {
+    margin-top: 0;
+  }
+
+  .example-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .example-btn {
+    padding: 0.75rem 1rem;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: 0.5rem;
+    text-align: left;
+    cursor: pointer;
+    font-size: 0.875rem;
+    color: var(--color-text);
+    transition: all 0.15s;
+  }
+
+  .example-btn:hover {
+    background: var(--color-border);
+  }
+
+  .example-btn.active {
+    background: var(--color-primary);
+    color: white;
+    border-color: var(--color-primary);
+  }
+
+  .options {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .option-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .option-group label {
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+  }
+
+  .option-group select {
+    padding: 0.5rem;
+    border: 1px solid var(--color-border);
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+  }
+
+  .option-group input[type="checkbox"] {
+    margin-right: 0.5rem;
+  }
+
+  .apply-btn {
+    margin-top: 1.5rem;
+    width: 100%;
+    padding: 0.75rem;
+    background: var(--color-primary);
+    color: white;
+    border: none;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .apply-btn:hover {
+    background: var(--color-primary-hover);
+  }
+
+  .graph-area {
+    flex: 1;
+    padding: 1.5rem;
+    overflow: hidden;
+  }
+
+  .graph-container {
+    width: 100%;
+    height: 100%;
+    background: var(--color-bg);
+    border-radius: 0.75rem;
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+  }
+</style>
+
+<script>
+  import { graph } from '@3plate/graph-core';
+
+  const examples = {
+    simple: {
+      nodes: ['a', 'b', 'c', 'd'],
+      edges: [
+        { source: 'a', target: 'b' },
+        { source: 'a', target: 'c' },
+        { source: 'b', target: 'd' },
+        { source: 'c', target: 'd' },
+      ]
+    },
+    ports: {
+      nodes: [
+        { id: 'a', ports: { out: ['foo', 'bar'] } },
+        'b',
+        'c',
+        { id: 'd', ports: { in: ['baz', 'quux'] } },
+      ],
+      edges: [
+        { source: { id: 'a', port: 'foo' }, target: 'b' },
+        { source: { id: 'a', port: 'bar' }, target: 'c' },
+        { source: 'b', target: { id: 'd', port: 'baz' } },
+        { source: 'c', target: { id: 'd', port: 'quux' } },
+      ]
+    },
+    markers: {
+      nodes: ['a', 'b', 'c', 'd'],
+      edges: [
+        { source: { id: 'a', marker: 'arrow' }, target: { id: 'b', marker: 'arrow' } },
+        { source: { id: 'a', marker: 'circle' }, target: { id: 'c', marker: 'diamond' } },
+        { source: { id: 'b', marker: 'diamond' }, target: { id: 'd', marker: 'bar' } },
+        { source: { id: 'c', marker: 'bar' }, target: { id: 'd', marker: 'circle' } },
+      ]
+    },
+    complex: {
+      nodes: [
+        { id: 'start', ports: { out: ['a', 'b', 'c'] } },
+        { id: 'process1' },
+        { id: 'process2' },
+        { id: 'process3' },
+        { id: 'merge', ports: { in: ['x', 'y', 'z'] } },
+        { id: 'end' },
+      ],
+      edges: [
+        { source: { id: 'start', port: 'a' }, target: 'process1' },
+        { source: { id: 'start', port: 'b' }, target: 'process2' },
+        { source: { id: 'start', port: 'c' }, target: 'process3' },
+        { source: 'process1', target: { id: 'merge', port: 'x' } },
+        { source: 'process2', target: { id: 'merge', port: 'y' } },
+        { source: 'process3', target: { id: 'merge', port: 'z' } },
+        { source: 'merge', target: 'end' },
+      ]
+    },
+    themed: {
+      nodes: [
+        { id: 'input', type: 'input', title: 'Data Input' },
+        { id: 'validate', type: 'process', title: 'Validate' },
+        { id: 'transform', type: 'process', title: 'Transform' },
+        { id: 'error', type: 'error', title: 'Error Handler' },
+        { id: 'output', type: 'success', title: 'Output' },
+      ],
+      edges: [
+        { source: 'input', target: 'validate' },
+        { source: 'validate', target: 'transform' },
+        { source: 'validate', target: 'error', type: 'error' },
+        { source: 'transform', target: 'output', type: 'success' },
+        { source: 'transform', target: 'error', type: 'error' },
+      ],
+      options: {
+        canvas: {
+          nodeTypes: {
+            input: { border: '#3b82f6' },
+            process: { border: '#8b5cf6' },
+            error: { bg: '#fef2f2', border: '#ef4444', text: '#991b1b' },
+            success: { bg: '#f0fdf4', border: '#22c55e', text: '#166534' },
+          },
+          edgeTypes: {
+            error: { color: '#ef4444' },
+            success: { color: '#22c55e' },
+          },
+        }
+      }
+    }
+  };
+
+  let currentExample = 'simple';
+  let currentGraph: any = null;
+
+  function getOptions(exampleOptions?: any) {
+    const orientation = (document.getElementById('orientation') as HTMLSelectElement).value;
+
+    return {
+      graph: { orientation },
+      canvas: {
+        width: '100%',
+        height: '100%',
+        ...exampleOptions?.canvas,
+      }
+    };
+  }
+
+  async function renderGraph() {
+    const container = document.getElementById('playground-graph');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    const example = examples[currentExample as keyof typeof examples] as any;
+    const options = getOptions(example.options);
+
+    try {
+      currentGraph = await graph({
+        root: 'playground-graph',
+        nodes: example.nodes,
+        edges: example.edges,
+        options,
+      });
+    } catch (e) {
+      console.error('Failed to render graph:', e);
+      container.innerHTML = '<p style="padding: 2rem; color: #ef4444;">Failed to load graph</p>';
+    }
+  }
+
+  // Example button handlers
+  document.querySelectorAll('.example-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.example-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentExample = btn.getAttribute('data-example') || 'simple';
+      renderGraph();
+    });
+  });
+
+  // Apply button handler
+  document.getElementById('apply-options')?.addEventListener('click', renderGraph);
+
+  // Initial render
+  renderGraph();
+</script>

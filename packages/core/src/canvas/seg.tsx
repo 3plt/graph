@@ -1,7 +1,7 @@
 import { Canvas } from './canvas'
 import { normalize } from './marker'
-import { EdgeStyle } from '../api/options'
 import { Seg as GraphSeg } from '../graph/seg'
+import { Graph } from '../graph/graph'
 import { MarkerType } from './marker'
 import { logger } from '../log'
 
@@ -18,22 +18,22 @@ export class Seg {
   hovered: boolean
   canvas: Canvas
   classPrefix: string
-  style: EdgeStyle | undefined
+  type: string | undefined
   svg: string
   el: SVGElement
-  source: { marker?: MarkerType }
-  target: { marker?: MarkerType }
+  source: { marker?: MarkerType, isDummy?: boolean }
+  target: { marker?: MarkerType, isDummy?: boolean }
 
-  constructor(canvas: Canvas, data: GraphSeg) {
+  constructor(canvas: Canvas, data: GraphSeg, g: Graph) {
     this.id = data.id
     this.canvas = canvas
     this.selected = false
     this.hovered = false
     this.svg = data.svg!
     this.classPrefix = canvas.classPrefix
-    this.source = data.source
-    this.target = data.target
-    this.style = data.style
+    this.source = { ...data.source, isDummy: data.sourceNode(g).isDummy }
+    this.target = { ...data.target, isDummy: data.targetNode(g).isDummy }
+    this.type = data.type
     this.el = this.render()
   }
 
@@ -67,7 +67,7 @@ export class Seg {
 
   update(data: GraphSeg) {
     this.svg = data.svg!
-    this.style = data.style
+    this.type = data.type
     this.source = data.source
     this.target = data.target
     this.remove()
@@ -77,17 +77,15 @@ export class Seg {
 
   render(): SVGElement {
     const c = styler('seg', styles, this.classPrefix)
-    const styleAttrs = {
-      stroke: this.style?.color,
-      strokeWidth: this.style?.width,
-      strokeDasharray: this.style?.style,
-    }
-    const { source, target } = normalize(this)
+    let { source, target } = normalize(this)
+    if (this.source.isDummy) source = undefined
+    if (this.target.isDummy) target = undefined
+    const typeClass = this.type ? `g3p-edge-type-${this.type}` : ''
     return (
       <g
         ref={(el: SVGElement) => this.el = el}
         id={`g3p-seg-${this.id}`}
-        className={c('container')}
+        className={`${c('container')} ${typeClass}`.trim()}
         onClick={this.handleClick.bind(this)}
         onMouseEnter={this.handleMouseEnter.bind(this)}
         onMouseLeave={this.handleMouseLeave.bind(this)}
@@ -95,7 +93,6 @@ export class Seg {
       >
         <path
           d={this.svg}
-          {...styleAttrs}
           fill="none"
           className={c('line')}
           markerStart={source ? `url(#g3p-marker-${source}-reverse)` : undefined}
@@ -103,7 +100,6 @@ export class Seg {
         />
         <path
           d={this.svg}
-          {...styleAttrs}
           stroke="transparent"
           fill="none"
           className={c('hitbox')}

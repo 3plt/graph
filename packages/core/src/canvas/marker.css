@@ -1,26 +1,26 @@
 .g3p-marker {
-  fill: #64748b;
+  fill: var(--g3p-edge-color);
   stroke: none;
 }
 
 .g3p-marker-bar {
   fill: none;
-  stroke: #64748b;
+  stroke: var(--g3p-edge-color);
   stroke-width: 2;
 }
 
 .g3p-marker.hovered {
-  fill: #475569;
+  fill: var(--g3p-text-muted);
 }
 
 .g3p-marker.selected {
-  fill: #3b82f6;
+  fill: var(--g3p-border-selected);
 }
 
 .g3p-marker-bar.hovered {
-  stroke: #475569;
+  stroke: var(--g3p-text-muted);
 }
 
 .g3p-marker-bar.selected {
-  stroke: #3b82f6;
+  stroke: var(--g3p-border-selected);
 }

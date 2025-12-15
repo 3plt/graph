@@ -98,12 +98,18 @@ importers:
 
   apps/demo-site:
     dependencies:
+      '@3plate/graph-core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@3plate/graph-react':
         specifier: workspace:*
         version: link:../../packages/react
       '@3plate/graph-vue':
         specifier: workspace:*
         version: link:../../packages/vue
+      '@astrojs/prism':
+        specifier: ^3.3.0
+        version: 3.3.0
       '@astrojs/react':
         specifier: ^4.4.2
         version: 4.4.2(@types/node@24.10.1)(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
@@ -113,6 +119,9 @@ importers:
       astro:
         specifier: ^5.16.2
         version: 5.16.4(@types/node@24.10.1)(rollup@4.53.3)(typescript@5.9.3)
+      prismjs:
+        specifier: ^1.30.0
+        version: 1.30.0
       react:
         specifier: ^19.2.0
         version: 19.2.1

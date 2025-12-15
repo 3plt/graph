@@ -16,18 +16,18 @@ export class Node {
   container!: SVGElement
   content!: HTMLElement
   canvas: Canvas
-  data?: PublicNodeData
+  data: PublicNodeData
   classPrefix: string
   isDummy: boolean
   pos?: Pos
 
-  constructor(canvas: Canvas, data?: PublicNodeData) {
+  constructor(canvas: Canvas, data: PublicNodeData, isDummy: boolean = false) {
     this.canvas = canvas
     this.data = data
     this.selected = false
     this.hovered = false
-    this.classPrefix = data?.style?.classPrefix ?? canvas.classPrefix
-    this.isDummy = !data
+    this.classPrefix = canvas.classPrefix
+    this.isDummy = isDummy
 
     if (this.isDummy) {
       const size = canvas.dummyNodeSize
@@ -42,6 +42,7 @@ export class Node {
   }
 
   append() {
+    console.log('append', this)
     this.canvas.group!.appendChild(this.container)
   }
 
@@ -87,42 +88,15 @@ export class Node {
     this.container!.setAttribute('transform', `translate(${x}, ${y})`)
   }
 
-  styleAttr(key: string, def?: string | number): string | number | undefined {
-    return this.style(key, def) as string | number | undefined
-  }
-
-  styleBool(key: string, def?: boolean): boolean {
-    return this.style(key, def) as boolean
-  }
-
-  style(key: string, def?: string | number | boolean): string | number | boolean | undefined {
-    const path = key.split('.')
-    let value: any = this.data!.style
-    for (const k of path) {
-      value = value?.[k]
-      if (value === undefined) break
-    }
-    if (value !== undefined) return value
-    value = this.canvas.nodeStyle
-    for (const k of path) {
-      value = value?.[k]
-      if (value === undefined) break
-    }
-    return value ?? def
-  }
-
   hasPorts(): boolean {
     return !!this.data?.ports?.in?.length || !!this.data?.ports?.out?.length
   }
 
   renderContent(el: HTMLElement): HTMLElement {
     const hasPorts = this.hasPorts()
-    const portStyle = this.styleAttr('portStyle', 'outside')
-    if (hasPorts && portStyle == 'inside')
-      el = this.renderInsidePorts(el)
-    if (this.styleBool('border.draw', true))
-      el = this.renderBorder(el)
-    if (hasPorts && portStyle == 'outside')
+    // Ports rendered outside by default
+    el = this.renderBorder(el)
+    if (hasPorts)
       el = this.renderOutsidePorts(el)
     return el
   }
@@ -131,9 +105,11 @@ export class Node {
     const c = styler('node', styles, this.classPrefix)
     const hasPorts = this.hasPorts()
     const inner = this.isDummy ? this.renderDummy() : this.renderForeign()
+    const nodeType = this.data?.type
+    const typeClass = nodeType ? `g3p-node-type-${nodeType}` : ''
     this.container = (
       <g
-        className={`${c('container')} ${c('dummy', this.isDummy)}`}
+        className={`${c('container')} ${c('dummy', this.isDummy)} ${typeClass}`.trim()}
         onClick={(e) => this.handleClick(e)}
         onMouseEnter={(e) => this.handleMouseEnter(e)}
         onMouseLeave={(e) => this.handleMouseLeave(e)}
@@ -160,7 +136,6 @@ export class Node {
     const c = styler('node', styles, this.classPrefix)
     let w = this.canvas.dummyNodeSize
     let h = this.canvas.dummyNodeSize
-    const s = this.styleAttr('border.size')
     w /= 2
     h /= 2
     return (<g>
@@ -172,7 +147,6 @@ export class Node {
         cx={w} cy={h} rx={w} ry={h}
         fill="none"
         className={c('border')}
-        strokeWidth={s}
       />
     </g>) as SVGElement
   }
@@ -232,7 +206,7 @@ export class Node {
     const pos = this.getPortPosition(dir)
     const isVertical = this.isVerticalOrientation()
     const layoutClass = isVertical ? 'row' : 'col'
-    const rotateLabels = !isVertical && this.styleBool('portLabelRotate', false)
+    const rotateLabels = false // TODO: make configurable via CSS class
     const rotateClass = rotateLabels ? `port-rotated-${pos}` : ''
 
     return (
@@ -291,12 +265,7 @@ export class Node {
 
   renderBorder(el: HTMLElement): HTMLElement {
     const c = styler('node', styles, this.classPrefix)
-    const r = this.styleAttr('border.radius')
-    const s = this.styleAttr('border.size')
-    return <div
-      className={c('border')}
-      style={{ borderRadius: r, borderWidth: s }}
-    >
+    return <div className={c('border')}>
       {el}
     </div> as HTMLElement
   }

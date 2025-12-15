@@ -1,21 +1,38 @@
+/* Default node content styles */
+.g3p-node-default {
+  padding: 8px 12px;
+  font: 14px/1.4 system-ui, sans-serif;
+  color: var(--g3p-text);
+}
+
+.g3p-node-title {
+  font-weight: 500;
+}
+
+.g3p-node-detail {
+  font-size: 12px;
+  color: var(--g3p-text-muted);
+  margin-top: 2px;
+}
+
 .g3p-node-container {
   transition: opacity 0.2s ease;
 }
 
 .g3p-node-border {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: var(--g3p-bg-node);
+  border: 1px solid var(--g3p-border);
   border-radius: 8px;
   overflow: hidden;
   transition: all 0.15s ease;
 }
 
 .g3p-node-border:hover {
-  border-color: #cbd5e1;
+  border-color: var(--g3p-border-hover);
 }
 
 .g3p-node-border.selected {
-  outline: 2px solid #3b82f6;
+  outline: 2px solid var(--g3p-border-selected);
 }
 
 .g3p-node-content-wrapper {
@@ -34,12 +51,12 @@
 
 /* Dummy node styles - these remain SVG since dummies are ellipses */
 .g3p-node-dummy .g3p-node-background {
-  fill: #f8fafc;
+  fill: var(--g3p-bg-secondary);
   opacity: 0.8;
 }
 
 .g3p-node-dummy {
-  stroke: #cbd5e1;
+  stroke: var(--g3p-border-hover);
   stroke-dasharray: 3, 3;
 }
 
@@ -65,18 +82,18 @@
 
 /* Port styles */
 .g3p-node-port {
-  background: #e2e8f0;
-  border: 1px solid #cbd5e1;
+  background: var(--g3p-port-bg);
+  border: 1px solid var(--g3p-border-hover);
   padding: 2px 6px;
   font-size: 0.5em;
-  color: #475569;
+  color: var(--g3p-text-muted);
   white-space: nowrap;
   transition: all 0.15s ease;
 }
 
 .g3p-node-port:hover {
-  background: #cbd5e1;
-  border-color: #94a3b8;
+  background: var(--g3p-port-bg-hover);
+  border-color: var(--g3p-text-subtle);
 }
 
 .g3p-node-port-rotated-left {

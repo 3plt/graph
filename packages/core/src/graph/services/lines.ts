@@ -127,7 +127,11 @@ export class Lines {
       const radius = g.options.turnRadius
       const p1 = Layout.anchorPos(g, seg, 'source')
       const p2 = Layout.anchorPos(g, seg, 'target')
+      const source = seg.sourceNode(g)
+      const target = seg.targetNode(g)
       const marker = normalize(seg)
+      if (source.isDummy) marker.source = undefined
+      if (target.isDummy) marker.target = undefined
       const path = seg.trackPos !== undefined
         ? Lines.createRailroadPath(g, p1, p2, seg.trackPos, radius, marker)
         : Lines.createDirectPath(g, p1, p2, radius, marker)

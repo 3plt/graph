@@ -17,3 +17,21 @@ export type Pos = {
   x: number
   y: number
 }
+
+/** Screen coordinates - pixels relative to the browser viewport */
+export type ScreenPos = Pos & { _brand: 'screen' }
+
+/** Canvas coordinates - pixels relative to the canvas container element */
+export type CanvasPos = Pos & { _brand: 'canvas' }
+
+/** Graph coordinates - SVG units in the graph's coordinate space */
+export type GraphPos = Pos & { _brand: 'graph' }
+
+/** Create a ScreenPos from x, y values */
+export const screenPos = (x: number, y: number): ScreenPos => ({ x, y } as ScreenPos)
+
+/** Create a CanvasPos from x, y values */
+export const canvasPos = (x: number, y: number): CanvasPos => ({ x, y } as CanvasPos)
+
+/** Create a GraphPos from x, y values */
+export const graphPos = (x: number, y: number): GraphPos => ({ x, y } as GraphPos)

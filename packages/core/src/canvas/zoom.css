@@ -5,22 +5,22 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  background: white;
+  background: var(--g3p-bg-node);
   border-radius: 8px;
   padding: 0.5rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 2px 8px var(--g3p-shadow);
   z-index: 10;
 }
 
 .g3p-zoom-btn {
   width: 36px;
   height: 36px;
-  border: 1px solid #e2e8f0;
-  background: white;
+  border: 1px solid var(--g3p-border);
+  background: var(--g3p-bg-node);
   border-radius: 6px;
   font-size: 1.25rem;
   font-weight: 600;
-  color: #475569;
+  color: var(--g3p-text-muted);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -29,9 +29,9 @@
 }
 
 .g3p-zoom-btn:hover {
-  background: #f1f5f9;
-  border-color: #cbd5e1;
-  color: #1e293b;
+  background: var(--g3p-bg-secondary);
+  border-color: var(--g3p-border-hover);
+  color: var(--g3p-text);
 }
 
 .g3p-zoom-btn:active {
@@ -46,6 +46,6 @@
   text-align: center;
   font-size: 0.75rem;
   font-weight: 600;
-  color: #64748b;
+  color: var(--g3p-text-subtle);
   padding: 0.25rem 0;
 }

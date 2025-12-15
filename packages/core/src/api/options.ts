@@ -40,16 +40,63 @@ export type GraphOptions = {
 
 export type RenderNode<N> = (node: N) => HTMLElement
 
+export type ColorMode = 'light' | 'dark' | 'system'
+
+/** Canvas background and general colors */
+export type CanvasTheme = {
+  /** Canvas background color */
+  bg?: string
+  /** Shadow color for floating elements */
+  shadow?: string
+}
+
+/** Node styling properties */
+export type NodeTheme = {
+  /** Node background color */
+  bg?: string
+  /** Node border color */
+  border?: string
+  /** Node border color on hover */
+  borderHover?: string
+  /** Node border color when selected */
+  borderSelected?: string
+  /** Node text color */
+  text?: string
+  /** Node secondary text color */
+  textMuted?: string
+}
+
+/** Port styling properties */
+export type PortTheme = {
+  /** Port background color */
+  bg?: string
+  /** Port background color on hover */
+  bgHover?: string
+}
+
+/** Edge styling properties */
+export type EdgeTheme = {
+  /** Edge stroke color */
+  color?: string
+}
+
+/** Combined theme with all customizable properties */
+export type ThemeVars = CanvasTheme & NodeTheme & PortTheme & EdgeTheme
+
 export type CanvasOptions<N> = {
   width?: number | string
   height?: number | string
-  nodeStyle?: NodeStyle
-  edgeStyle?: EdgeStyle
+  /** Padding inside the canvas viewport (default: 20) */
+  padding?: number
   classPrefix?: string
   markerSize?: number
   editable?: boolean
   panZoom?: boolean
   renderNode?: RenderNode<N>
+  colorMode?: ColorMode
+  theme?: ThemeVars
+  nodeTypes?: Record<string, ThemeVars>
+  edgeTypes?: Record<string, ThemeVars>
 }
 
 export type PropsOptions<N, E> = {
@@ -109,11 +156,11 @@ export type NodeProps<N> = {
   id?: string
   title?: string
   text?: string
+  type?: string
   ports?: {
     in?: (string | PortProps)[],
     out?: (string | PortProps)[]
   }
-  style?: NodeStyle
   render?: RenderNode<N>
 }
 
@@ -129,7 +176,6 @@ export type EdgeProps<N> = {
   source: EdgeEnd<N>
   target: EdgeEnd<N>
   type?: string
-  style?: EdgeStyle
 }
 
 export type PortProps = {

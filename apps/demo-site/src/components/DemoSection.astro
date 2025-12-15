@@ -1,6 +1,27 @@
 ---
-import ReactDemo from './ReactDemo';
-import VueDemo from './VueDemo.vue';
+import CoreDemo from './CoreDemo.astro';
+import ReactDemoAstro from './ReactDemoAstro.astro';
+import VueDemoAstro from './VueDemoAstro.astro';
+import Code from './Code.astro';
+
+const angularExample = `import { Component } from '@angular/core';
+import { GraphComponent } from '@3plate/graph-angular';
+
+@Component({
+  selector: 'app-root',
+  standalone: true,
+  imports: [GraphComponent],
+  template: \`
+    <graph
+      [nodes]="nodes"
+      [edges]="edges"
+    />
+  \`
+})
+export class AppComponent {
+  nodes = ['a', 'b', 'c', 'd'];
+  edges = ['a->b', 'a->c', 'b->d', 'c->d'];
+}`;
 ---
 
 <section class="demo-section" id="demo">
@@ -10,22 +31,36 @@ import VueDemo from './VueDemo.vue';
     
     <div class="demo-container">
       <div class="tabs">
-        <button class="tab active" data-tab="react">React</button>
+        <button class="tab active" data-tab="core">Core</button>
+        <button class="tab" data-tab="react">React</button>
         <button class="tab" data-tab="vue">Vue</button>
         <button class="tab" data-tab="angular">Angular</button>
       </div>
 
       <div class="demo-content">
-        <div class="demo-panel active" data-panel="react">
-          <ReactDemo client:load />
+        <div class="demo-panel active" data-panel="core">
+          <CoreDemo />
+        </div>
+        <div class="demo-panel" data-panel="react">
+          <ReactDemoAstro />
         </div>
         <div class="demo-panel" data-panel="vue">
-          <VueDemo client:load />
+          <VueDemoAstro />
         </div>
         <div class="demo-panel" data-panel="angular">
-          <div class="placeholder">
-            <p>Angular demo coming soon!</p>
-            <code>npm install @3plate/graph-angular</code>
+          <div class="demo-wrapper">
+            <div class="demo-info">
+              <h3>Angular Implementation</h3>
+              <p>Using <code>@3plate/graph-angular</code> package</p>
+            </div>
+            <div class="placeholder">
+              <p>Angular wrapper coming soon!</p>
+              <code>npm install @3plate/graph-angular</code>
+            </div>
+            <div class="code-example">
+              <h4>Planned Usage</h4>
+              <Code code={angularExample} lang="typescript" />
+            </div>
           </div>
         </div>
       </div>
@@ -82,7 +117,7 @@ import VueDemo from './VueDemo.vue';
   }
 
   .demo-container {
-    background: white;
+    background: var(--color-bg);
     border-radius: 0.75rem;
     overflow: hidden;
     box-shadow: var(--shadow-lg);
@@ -114,7 +149,7 @@ import VueDemo from './VueDemo.vue';
 
   .tab.active {
     color: var(--color-primary);
-    background: white;
+    background: var(--color-bg);
     border-bottom-color: var(--color-primary);
   }
 

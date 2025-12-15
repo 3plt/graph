@@ -21,27 +21,51 @@ import DemoSection from '../components/DemoSection.astro';
         <div class="features-grid">
           <div class="feature">
             <h3>🎯 Stable Layouts</h3>
-            <p>Consistent node positioning across updates</p>
+            <p>Hierarchical layout algorithm keeps nodes in consistent positions even as the graph changes. No more jarring jumps when adding or removing nodes.</p>
           </div>
           <div class="feature">
-            <h3>⚡ Fast Rendering</h3>
-            <p>SVG-based with optimized performance</p>
+            <h3>✨ Crisp SVG Rendering</h3>
+            <p>Pure SVG output means pixel-perfect rendering at any zoom level. No blurry canvas scaling—your graphs look sharp on retina displays and when exported.</p>
+          </div>
+          <div class="feature">
+            <h3>🔌 Node Ports</h3>
+            <p>First-class support for input/output ports on nodes. Edges connect to specific ports with automatic positioning—perfect for dataflow and pipeline visualizations.</p>
+          </div>
+          <div class="feature">
+            <h3>✏️ Editable Mode</h3>
+            <p>Built-in support for interactive graph editing. Users can drag nodes, create connections, and modify the graph structure with intuitive controls.</p>
           </div>
           <div class="feature">
             <h3>🔄 Incremental Updates</h3>
-            <p>Smooth transitions and animations</p>
+            <p>Efficiently update only what changed. Add, remove, or modify nodes and edges without re-rendering the entire graph.</p>
           </div>
           <div class="feature">
-            <h3>🎨 Customizable</h3>
-            <p>Full control over node and edge rendering</p>
+            <h3>🎨 Fully Customizable</h3>
+            <p>Render nodes with any HTML/CSS content. Style edges with custom markers, colors, and patterns. Apply your own CSS classes and themes.</p>
           </div>
           <div class="feature">
-            <h3>🗺️ Interactive</h3>
-            <p>Pan, zoom, and mini-map support</p>
+            <h3>↔️ Flexible Orientation</h3>
+            <p>Layout graphs in any direction: top-to-bottom, bottom-to-top, left-to-right, or right-to-left. Switch orientations on the fly.</p>
           </div>
           <div class="feature">
-            <h3>🔌 Multi-Framework</h3>
-            <p>React, Vue, Angular support</p>
+            <h3>🗺️ Pan & Zoom</h3>
+            <p>Smooth panning and zooming with mouse, touch, and keyboard support. Optional mini-map for navigating large graphs.</p>
+          </div>
+          <div class="feature">
+            <h3>📍 Edge Markers</h3>
+            <p>Multiple marker styles for edge endpoints: arrows, circles, diamonds, bars. Mix and match on source and target ends.</p>
+          </div>
+          <div class="feature">
+            <h3>🔌 Framework Agnostic</h3>
+            <p>Core library works with vanilla JS. Official wrappers for React, Vue, and Angular integrate seamlessly with your existing app.</p>
+          </div>
+          <div class="feature">
+            <h3>📦 Zero Dependencies</h3>
+            <p>Lightweight core with minimal footprint. No heavy charting libraries or complex build requirements.</p>
+          </div>
+          <div class="feature">
+            <h3>🌙 Dark Mode Ready</h3>
+            <p>CSS variable-based theming makes it easy to support light and dark modes. Respects user preferences out of the box.</p>
           </div>
         </div>
       </div>
@@ -52,23 +76,24 @@ import DemoSection from '../components/DemoSection.astro';
     <section class="installation" id="installation">
       <div class="container">
         <h2>Installation</h2>
+        <p class="install-intro">Install the core library, or use a framework-specific wrapper:</p>
         
-        <div class="install-tabs">
-          <div class="install-option">
-            <h3>Core Library</h3>
-            <pre><code>npm install @3plate/graph-core</code></pre>
+        <div class="install-list">
+          <div class="install-row">
+            <span class="install-label">Core</span>
+            <code class="install-cmd">npm install @3plate/graph-core</code>
           </div>
-          <div class="install-option">
-            <h3>React</h3>
-            <pre><code>npm install @3plate/graph-react</code></pre>
+          <div class="install-row">
+            <span class="install-label">React</span>
+            <code class="install-cmd">npm install @3plate/graph-react</code>
           </div>
-          <div class="install-option">
-            <h3>Vue</h3>
-            <pre><code>npm install @3plate/graph-vue</code></pre>
+          <div class="install-row">
+            <span class="install-label">Vue</span>
+            <code class="install-cmd">npm install @3plate/graph-vue</code>
           </div>
-          <div class="install-option">
-            <h3>Angular</h3>
-            <pre><code>npm install @3plate/graph-angular</code></pre>
+          <div class="install-row">
+            <span class="install-label">Angular</span>
+            <code class="install-cmd">npm install @3plate/graph-angular</code>
           </div>
         </div>
       </div>
@@ -100,7 +125,7 @@ import DemoSection from '../components/DemoSection.astro';
   /* Hero Section */
   .hero {
     padding: 4rem 0;
-    background: white;
+    background: var(--color-bg);
     border-bottom: 1px solid var(--color-border);
   }
 
@@ -164,49 +189,55 @@ import DemoSection from '../components/DemoSection.astro';
   /* Installation Section */
   .installation {
     padding: 4rem 0;
-    background: white;
+    background: var(--color-bg);
   }
 
   .installation h2 {
     font-size: 2.5rem;
-    margin-bottom: 2rem;
+    margin-bottom: 0.5rem;
   }
 
-  .install-tabs {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 1.5rem;
+  .install-intro {
+    color: var(--color-text-muted);
+    margin-bottom: 1.5rem;
   }
 
-  .install-option {
+  .install-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    max-width: 500px;
+  }
+
+  .install-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
     background: var(--color-bg-secondary);
-    padding: 1.5rem;
-    border-radius: 0.5rem;
     border: 1px solid var(--color-border);
+    border-radius: 0.5rem;
+    padding: 0.75rem 1rem;
   }
 
-  .install-option h3 {
-    font-size: 1.125rem;
-    margin-bottom: 1rem;
+  .install-label {
+    font-weight: 600;
     color: var(--color-primary);
+    min-width: 70px;
   }
 
-  .install-option pre {
-    margin: 0;
-    overflow-x: auto;
-  }
-
-  .install-option code {
-    background: white;
-    padding: 0.75rem;
-    display: block;
+  .install-cmd {
+    flex: 1;
+    background: var(--color-bg);
+    padding: 0.5rem 0.75rem;
     border-radius: 0.25rem;
+    font-size: 0.875rem;
+    white-space: nowrap;
   }
 
   /* Footer */
   footer {
     padding: 2rem 0;
-    background: white;
+    background: var(--color-bg);
     border-top: 1px solid var(--color-border);
     text-align: center;
   }
@@ -230,9 +261,18 @@ import DemoSection from '../components/DemoSection.astro';
       font-size: 1.25rem;
     }
 
-    .features-grid,
-    .install-tabs {
+    .features-grid {
       grid-template-columns: 1fr;
+    }
+
+    .install-row {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+
+    .install-cmd {
+      width: 100%;
     }
   }
 </style>

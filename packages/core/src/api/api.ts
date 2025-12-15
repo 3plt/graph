@@ -102,19 +102,10 @@ export class API<N, E> {
 
     for (const oldNode of oldGraph.nodes.values()) {
       const newNode = newGraph.nodes.get(oldNode.id)
-      if (!newNode) {
-        this.canvas.deleteNode(oldNode)
-      } else if (oldNode.data !== newNode.data) {
-        this.canvas.deleteNode(oldNode)
-        this.canvas.addNode(newNode)
-      } else if (oldNode.pos!.x !== newNode.pos!.x ||
-        oldNode.pos!.y !== newNode.pos!.y) {
-        this.canvas.updateNode(newNode)
-      }
+      if (!newNode) this.canvas.deleteNode(oldNode)
     }
     for (const newNode of newGraph.nodes.values()) {
-      if (!oldGraph.nodes.has(newNode.id))
-        this.canvas.addNode(newNode)
+      if (!oldGraph.nodes.has(newNode.id)) this.canvas.addNode(newNode)
     }
     for (const oldSeg of oldGraph.segs.values()) {
       const newSeg = newGraph.segs.get(oldSeg.id)
@@ -125,7 +116,7 @@ export class API<N, E> {
     }
     for (const newSeg of newGraph.segs.values()) {
       if (!oldGraph.segs.has(newSeg.id))
-        this.canvas.addSeg(newSeg)
+        this.canvas.addSeg(newSeg, newGraph)
     }
 
     this.canvas.update()
@@ -182,7 +173,8 @@ export class API<N, E> {
     const { graph } = this.state
     for (const nodeId of graph.dirtyNodes) {
       const node = graph.getNode(nodeId)
-      this.canvas.getNode(node.key).setPos(node.pos!)
+      if (!node.isDummy)
+        this.canvas.getNode(node.key).setPos(node.pos!)
     }
   }
 
@@ -209,14 +201,14 @@ export class API<N, E> {
     else if (typeof data == 'string') props = { id: data }
     else if (typeof data == 'object') props = data
     else throw new Error(`invalid node ${data}`)
-    let { id, title, text, style, render } = props
+    let { id, title, text, type, render } = props
     id ??= this.getNodeId(data)
     const ports = this.parsePorts(props.ports)
     let version = this.nodeVersions.get(data)
     if (!version) version = 1
     else if (bumpVersion) version++
     this.nodeVersions.set(data, version)
-    return { id, data, ports, title, text, style, render, version }
+    return { id, data, ports, title, text, type, render, version }
   }
 
   private parseEdge(data: E): PublicEdgeData {
@@ -227,11 +219,11 @@ export class API<N, E> {
     else if (typeof data == 'string') props = this.parseStringEdge(data)
     else if (typeof data == 'object') props = data
     else throw new Error(`invalid edge ${data}`)
-    let { id, source, target, type, style } = props
+    let { id, source, target, type } = props
     id ??= this.getEdgeId(data)
     source = this.parseEdgeEnd(source)
     target = this.parseEdgeEnd(target)
-    const edge = { id, source, target, type, style, data }
+    const edge = { id, source, target, type, data }
     return edge
   }
 

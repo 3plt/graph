@@ -3,13 +3,13 @@
 }
 
 .g3p-seg-line {
-  stroke: var(--g3p-edge-color, #64748b);
+  stroke: var(--g3p-edge-color);
   stroke-width: 1;
   transition: stroke 0.2s ease, stroke-width 0.2s ease;
 }
 
 .g3p-seg-marker {
-  fill: var(--g3p-edge-color, #64748b);
+  fill: var(--g3p-edge-color);
 }
 
 .g3p-seg-line.hovered {
@@ -18,7 +18,7 @@
 }
 
 .g3p-seg-line.selected {
-  stroke: var(--g3p-node-border-selected, #3b82f6);
+  stroke: var(--g3p-border-selected);
   stroke-width: 2;
 }
 

@@ -24,7 +24,7 @@ export type PublicNodeData = {
   version: number,
   title?: string
   text?: string
-  style?: NodeStyle
+  type?: string
   ports: { in: PortData[] | null, out: PortData[] | null }
   render?: RenderNode<any>
   dims?: Dims
@@ -50,7 +50,7 @@ const defNodeData: NodeData = {
   version: 0,
   title: undefined,
   text: undefined,
-  style: undefined,
+  type: undefined,
   render: undefined,
   ports: { in: null, out: null },
   aligned: {},
@@ -70,21 +70,21 @@ const defNodeData: NodeData = {
 export class Node extends Record(defNodeData) {
   static dummyPrefix = 'd:'
 
-  get edgeId(): EdgeId {
-    if (!this.isDummy)
-      throw new Error(`node ${this.id} is not a dummy`)
-    if (this.isMerged)
-      throw new Error(`node ${this.id} is merged`)
-    return this.get('edgeIds')[0]
-  }
+  // get edgeId(): EdgeId {
+  //   if (!this.isDummy)
+  //     throw new Error(`node ${this.id} is not a dummy`)
+  //   if (this.isMerged)
+  //     throw new Error(`node ${this.id} is merged`)
+  //   return this.get('edgeIds')[0]
+  // }
 
-  get edgeIds(): EdgeId[] {
-    if (!this.isDummy)
-      throw new Error(`node ${this.id} is not a dummy`)
-    if (!this.isMerged)
-      throw new Error(`node ${this.id} is not merged`)
-    return this.get('edgeIds')
-  }
+  // get edgeIds(): EdgeId[] {
+  //   if (!this.isDummy)
+  //     throw new Error(`node ${this.id} is not a dummy`)
+  //   if (!this.isMerged)
+  //     throw new Error(`node ${this.id} is not merged`)
+  //   return this.get('edgeIds')
+  // }
 
   get key(): NodeKey {
     return this.isDummy ? this.id : Node.key(this)

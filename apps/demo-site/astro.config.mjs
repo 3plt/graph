@@ -10,4 +10,9 @@ export default defineConfig({
   ],
   site: 'https://3plt.github.io',
   base: '/graph',
+  vite: {
+    resolve: {
+      conditions: ['source'],
+    },
+  },
 });

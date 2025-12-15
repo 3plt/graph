@@ -1,5 +1,11 @@
 # @3plate/graph-core
 
+## 0.1.4
+
+### Patch Changes
+
+- Refactor styling
+
 ## 0.1.3
 
 ### Patch Changes

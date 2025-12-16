@@ -53,6 +53,13 @@ import { examples, exampleList } from '../examples';
             <option value="dark">Dark</option>
           </select>
         </div>
+
+        <div class="option-group">
+          <label>
+            <input type="checkbox" id="editable" />
+            Editable Mode
+          </label>
+        </div>
       </div>
 
     </div>
@@ -180,6 +187,7 @@ import { examples, exampleList } from '../examples';
 
   function getOptions(exampleOptions?: any) {
     const orientation = (document.getElementById('orientation') as HTMLSelectElement).value;
+    const editable = (document.getElementById('editable') as HTMLInputElement).checked;
 
     return {
       graph: { orientation },
@@ -187,6 +195,7 @@ import { examples, exampleList } from '../examples';
         width: '100%',
         height: '100%',
         colorMode: getResolvedColorMode(),
+        editable,
         ...exampleOptions?.canvas,
       }
     };

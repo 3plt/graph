@@ -1,0 +1,555 @@
+/* ==================== Theme Variables ==================== */
+
+/* Light theme (default) */
+:root {
+  --g3p-bg: #fafafa;
+  --g3p-bg-node: #ffffff;
+  --g3p-bg-secondary: #f8fafc;
+  --g3p-border: #e2e8f0;
+  --g3p-border-hover: #cbd5e1;
+  --g3p-border-selected: #3b82f6;
+  --g3p-text: #1e293b;
+  --g3p-text-muted: #475569;
+  --g3p-text-subtle: #64748b;
+  --g3p-edge-color: #64748b;
+  --g3p-port-bg: #e2e8f0;
+  --g3p-port-bg-hover: #cbd5e1;
+  --g3p-shadow: rgba(0, 0, 0, 0.15);
+}
+
+/* Dark theme (auto via prefers-color-scheme) */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --g3p-bg: #1a1a1a;
+    --g3p-bg-node: #333333;
+    --g3p-bg-secondary: #2a2a2a;
+    --g3p-border: #4a4a4a;
+    --g3p-border-hover: #5a5a5a;
+    --g3p-border-selected: #60a5fa;
+    --g3p-text: #f0f0f0;
+    --g3p-text-muted: #c0c0c0;
+    --g3p-text-subtle: #909090;
+    --g3p-edge-color: #b0b0b0;
+    --g3p-port-bg: #444444;
+    --g3p-port-bg-hover: #555555;
+    --g3p-shadow: rgba(0, 0, 0, 0.5);
+  }
+}
+
+/* Explicit light mode override */
+.g3p-light {
+  --g3p-bg: #fafafa;
+  --g3p-bg-node: #ffffff;
+  --g3p-bg-secondary: #f8fafc;
+  --g3p-border: #e2e8f0;
+  --g3p-border-hover: #cbd5e1;
+  --g3p-border-selected: #3b82f6;
+  --g3p-text: #1e293b;
+  --g3p-text-muted: #475569;
+  --g3p-text-subtle: #64748b;
+  --g3p-edge-color: #64748b;
+  --g3p-port-bg: #e2e8f0;
+  --g3p-port-bg-hover: #cbd5e1;
+  --g3p-shadow: rgba(0, 0, 0, 0.15);
+}
+
+/* Explicit dark mode override */
+.g3p-dark {
+  --g3p-bg: #1a1a1a;
+  --g3p-bg-node: #333333;
+  --g3p-bg-secondary: #2a2a2a;
+  --g3p-border: #4a4a4a;
+  --g3p-border-hover: #5a5a5a;
+  --g3p-border-selected: #60a5fa;
+  --g3p-text: #f0f0f0;
+  --g3p-text-muted: #c0c0c0;
+  --g3p-text-subtle: #909090;
+  --g3p-edge-color: #b0b0b0;
+  --g3p-port-bg: #444444;
+  --g3p-port-bg-hover: #555555;
+  --g3p-shadow: rgba(0, 0, 0, 0.5);
+}
+
+/* ==================== Canvas ==================== */
+
+.g3p-canvas-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.g3p-canvas-root {
+  display: block;
+  width: 100%;
+  height: 100%;
+  user-select: none;
+  background: var(--g3p-bg);
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+/* ==================== Zoom Controls ==================== */
+
+.g3p-zoom-controls {
+  position: absolute;
+  bottom: 1rem;
+  right: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: var(--g3p-bg-node);
+  border-radius: 8px;
+  padding: 0.5rem;
+  box-shadow: 0 2px 8px var(--g3p-shadow);
+  z-index: 10;
+}
+
+.g3p-zoom-btn {
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--g3p-border);
+  background: var(--g3p-bg-node);
+  border-radius: 6px;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--g3p-text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.g3p-zoom-btn:hover {
+  background: var(--g3p-bg-secondary);
+  border-color: var(--g3p-border-hover);
+  color: var(--g3p-text);
+}
+
+.g3p-zoom-btn:active {
+  transform: scale(0.95);
+}
+
+.g3p-zoom-reset {
+  font-size: 1.1rem;
+}
+
+.g3p-zoom-level {
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--g3p-text-subtle);
+  padding: 0.25rem 0;
+}
+
+/* ==================== Nodes ==================== */
+
+/* Default node content styles */
+.g3p-node-default {
+  padding: 8px 12px;
+  font: 14px/1.4 system-ui, sans-serif;
+  color: var(--g3p-text);
+}
+
+.g3p-node-title {
+  font-weight: 500;
+}
+
+.g3p-node-detail {
+  font-size: 12px;
+  color: var(--g3p-text-muted);
+  margin-top: 2px;
+}
+
+.g3p-node-container {
+  transition: opacity 0.2s ease;
+}
+
+.g3p-node-border {
+  background: var(--g3p-bg-node);
+  border: 1px solid var(--g3p-border);
+  border-radius: 8px;
+  overflow: hidden;
+  transition: all 0.15s ease;
+}
+
+.g3p-node-border:hover {
+  border-color: var(--g3p-border-hover);
+}
+
+.g3p-node-border.selected {
+  outline: 2px solid var(--g3p-border-selected);
+}
+
+.g3p-node-content-wrapper {
+  pointer-events: none;
+}
+
+.g3p-node-content {
+  pointer-events: auto;
+  box-sizing: border-box;
+}
+
+.g3p-node-content>div {
+  width: 100%;
+  height: 100%;
+}
+
+/* Dummy node styles - these remain SVG since dummies are ellipses */
+.g3p-node-dummy .g3p-node-background {
+  fill: var(--g3p-bg-secondary);
+  opacity: 0.8;
+}
+
+.g3p-node-dummy {
+  stroke: var(--g3p-border-hover);
+  stroke-dasharray: 3, 3;
+  cursor: default;
+}
+
+/* Port container styles */
+.g3p-node-ports {
+  display: flex;
+  gap: 4px;
+}
+
+.g3p-node-ports-row {
+  flex-direction: row;
+  justify-content: center;
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+.g3p-node-ports-col {
+  flex-direction: column;
+  justify-content: center;
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+/* Port styles */
+.g3p-node-port {
+  background: var(--g3p-port-bg);
+  border: 1px solid var(--g3p-border-hover);
+  padding: 2px 6px;
+  font-size: 0.5em;
+  color: var(--g3p-text-muted);
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.g3p-node-port:hover {
+  background: var(--g3p-port-bg-hover);
+  border-color: var(--g3p-text-subtle);
+}
+
+.g3p-node-port-rotated-left {
+  writing-mode: vertical-lr;
+}
+
+.g3p-node-port-rotated-right {
+  writing-mode: vertical-rl;
+}
+
+/* Outside ports: rounded corners away from the node rectangle, no border on touching side */
+.g3p-node-port-out-top {
+  border-radius: 4px 4px 0 0;
+  border-bottom: none;
+}
+
+.g3p-node-port-out-bottom {
+  border-radius: 0 0 4px 4px;
+  border-top: none;
+}
+
+.g3p-node-port-out-left {
+  border-radius: 4px 0 0 4px;
+  border-right: none;
+}
+
+.g3p-node-port-out-right {
+  border-radius: 0 4px 4px 0;
+  border-left: none;
+}
+
+/* Inside ports: rounded corners toward the content, no border on outer edge */
+.g3p-node-port-in-top {
+  border-radius: 0 0 4px 4px;
+  border-top: none;
+}
+
+.g3p-node-port-in-bottom {
+  border-radius: 4px 4px 0 0;
+  border-bottom: none;
+}
+
+.g3p-node-port-in-left {
+  border-radius: 0 4px 4px 0;
+  border-left: none;
+}
+
+.g3p-node-port-in-right {
+  border-radius: 4px 0 0 4px;
+  border-right: none;
+}
+
+/* Port wrapper */
+.g3p-node-with-ports {
+  display: flex;
+}
+
+.g3p-node-with-ports-v {
+  flex-direction: column;
+}
+
+.g3p-node-with-ports-h {
+  flex-direction: row;
+}
+
+/* ==================== Edges (Segments) ==================== */
+
+.g3p-seg-container {
+  transition: opacity 0.2s ease;
+}
+
+.g3p-seg-line {
+  stroke: var(--g3p-edge-color);
+  stroke-width: 1;
+  transition: stroke 0.2s ease, stroke-width 0.2s ease;
+}
+
+.g3p-seg-marker {
+  fill: var(--g3p-edge-color);
+}
+
+.g3p-seg-line.hovered {
+  stroke-width: 2;
+  opacity: 1;
+}
+
+.g3p-seg-line.selected {
+  stroke: var(--g3p-border-selected);
+  stroke-width: 2;
+}
+
+.g3p-seg-hitbox {
+  cursor: pointer;
+}
+
+/* ==================== Markers ==================== */
+
+.g3p-marker {
+  fill: context-stroke;
+  stroke: none;
+}
+
+.g3p-marker-bar {
+  fill: none;
+  stroke: context-stroke;
+  stroke-width: 2;
+}
+
+.g3p-marker.hovered {
+  fill: var(--g3p-text-muted);
+}
+
+.g3p-marker.selected {
+  fill: var(--g3p-border-selected);
+}
+
+.g3p-marker-bar.hovered {
+  stroke: var(--g3p-text-muted);
+}
+
+.g3p-marker-bar.selected {
+  stroke: var(--g3p-border-selected);
+}
+
+/* ==================== New Edge (Edit Mode) ==================== */
+
+.g3p-new-edge-container {
+  pointer-events: none;
+}
+
+.g3p-new-edge-origin {
+  fill: var(--g3p-edge-color, #64748b);
+  stroke: none;
+}
+
+.g3p-new-edge-line {
+  stroke: var(--g3p-edge-color, #64748b);
+  stroke-width: 2;
+  stroke-dasharray: 6 4;
+  stroke-linecap: round;
+  fill: none;
+  animation: g3p-dash-animation 0.5s linear infinite;
+}
+
+.g3p-new-edge-end {
+  fill: var(--g3p-edge-color, #64748b);
+  stroke: white;
+  stroke-width: 1.5;
+}
+
+@keyframes g3p-dash-animation {
+  to {
+    stroke-dashoffset: -10;
+  }
+}
+
+/* ==================== Edit Mode Hover States ==================== */
+
+.g3p-node-container.g3p-drop-target .g3p-node-border {
+  background: var(--g3p-border-selected);
+  color: white;
+}
+
+.g3p-node-port.g3p-drop-target {
+  background: var(--g3p-border-selected);
+  color: white;
+}
+
+/* ==================== Modals ==================== */
+
+.g3p-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.g3p-modal-dialog {
+  background: var(--g3p-bg-node);
+  border: 1px solid var(--g3p-border);
+  border-radius: 8px;
+  box-shadow: 0 4px 20px var(--g3p-shadow);
+  min-width: 280px;
+  max-width: 400px;
+}
+
+.g3p-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--g3p-border);
+}
+
+.g3p-modal-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--g3p-text);
+}
+
+.g3p-modal-close {
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: var(--g3p-text-muted);
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+
+.g3p-modal-close:hover {
+  color: var(--g3p-text);
+}
+
+.g3p-modal-body {
+  padding: 16px;
+}
+
+.g3p-modal-field {
+  margin-bottom: 12px;
+}
+
+.g3p-modal-field:last-child {
+  margin-bottom: 0;
+}
+
+.g3p-modal-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--g3p-text-muted);
+  margin-bottom: 4px;
+}
+
+.g3p-modal-input,
+.g3p-modal-select {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 13px;
+  border: 1px solid var(--g3p-border);
+  border-radius: 4px;
+  background: var(--g3p-bg);
+  color: var(--g3p-text);
+  box-sizing: border-box;
+}
+
+.g3p-modal-input:focus,
+.g3p-modal-select:focus {
+  outline: none;
+  border-color: var(--g3p-border-selected);
+}
+
+.g3p-modal-footer {
+  padding: 12px 16px;
+  border-top: 1px solid var(--g3p-border);
+}
+
+.g3p-modal-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.g3p-modal-spacer {
+  flex: 1;
+}
+
+.g3p-modal-btn {
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 4px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+}
+
+.g3p-modal-btn-primary {
+  background: var(--g3p-border-selected);
+  color: white;
+}
+
+.g3p-modal-btn-primary:hover {
+  filter: brightness(1.1);
+}
+
+.g3p-modal-btn-secondary {
+  background: var(--g3p-bg);
+  border-color: var(--g3p-border);
+  color: var(--g3p-text);
+}
+
+.g3p-modal-btn-secondary:hover {
+  background: var(--g3p-bg-secondary);
+}
+
+.g3p-modal-btn-danger {
+  background: #ef4444;
+  color: white;
+}
+
+.g3p-modal-btn-danger:hover {
+  background: #dc2626;
+}

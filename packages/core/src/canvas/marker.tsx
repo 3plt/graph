@@ -1,5 +1,4 @@
 import { PublicEdgeData } from '../graph/edge'
-export { default as styles } from './marker.css?raw'
 
 export type MarkerType = 'arrow' | 'circle' | 'diamond' | 'bar' | 'none'
 
@@ -8,7 +7,7 @@ export type Markers = {
   target?: MarkerType
 }
 
-export function arrow(size: number, classPrefix: string, reverse: boolean = false): SVGElement {
+export function arrow(size: number, reverse: boolean = false): SVGElement {
   const h = size / 1.5
   const w = size
   const ry = h / 2
@@ -16,7 +15,7 @@ export function arrow(size: number, classPrefix: string, reverse: boolean = fals
   return (
     <marker
       id={`g3p-marker-arrow${suffix}`}
-      className={`${classPrefix}-marker ${classPrefix}-marker-arrow`}
+      className="g3p-marker g3p-marker-arrow"
       markerWidth={size}
       markerHeight={size}
       refX="2"
@@ -29,14 +28,14 @@ export function arrow(size: number, classPrefix: string, reverse: boolean = fals
   ) as SVGElement
 }
 
-export function circle(size: number, classPrefix: string, reverse: boolean = false): SVGElement {
+export function circle(size: number, reverse: boolean = false): SVGElement {
   const r = size / 3
   const cy = size / 2
   const suffix = reverse ? '-reverse' : ''
   return (
     <marker
       id={`g3p-marker-circle${suffix}`}
-      className={`${classPrefix}-marker ${classPrefix}-marker-circle`}
+      className="g3p-marker g3p-marker-circle"
       markerWidth={size}
       markerHeight={size}
       refX="2"
@@ -49,7 +48,7 @@ export function circle(size: number, classPrefix: string, reverse: boolean = fal
   ) as SVGElement
 }
 
-export function diamond(size: number, classPrefix: string, reverse: boolean = false): SVGElement {
+export function diamond(size: number, reverse: boolean = false): SVGElement {
   const w = size * 0.7
   const h = size / 2
   const cy = size / 2
@@ -57,7 +56,7 @@ export function diamond(size: number, classPrefix: string, reverse: boolean = fa
   return (
     <marker
       id={`g3p-marker-diamond${suffix}`}
-      className={`${classPrefix}-marker ${classPrefix}-marker-diamond`}
+      className="g3p-marker g3p-marker-diamond"
       markerWidth={size}
       markerHeight={size}
       refX="2"
@@ -70,14 +69,14 @@ export function diamond(size: number, classPrefix: string, reverse: boolean = fa
   ) as SVGElement
 }
 
-export function bar(size: number, classPrefix: string, reverse: boolean = false): SVGElement {
+export function bar(size: number, reverse: boolean = false): SVGElement {
   const h = size * 0.6
   const cy = size / 2
   const suffix = reverse ? '-reverse' : ''
   return (
     <marker
       id={`g3p-marker-bar${suffix}`}
-      className={`${classPrefix}-marker ${classPrefix}-marker-bar`}
+      className="g3p-marker g3p-marker-bar"
       markerWidth={size}
       markerHeight={size}
       refX="2"
@@ -90,7 +89,7 @@ export function bar(size: number, classPrefix: string, reverse: boolean = false)
   ) as SVGElement
 }
 
-export function none(size: number, classPrefix: string, reverse: boolean = false): SVGElement | undefined {
+export function none(size: number, reverse: boolean = false): SVGElement | undefined {
   return undefined
 }
 
@@ -108,7 +107,7 @@ export function normalize(data: MarkerObj): Markers {
   return { source, target }
 }
 
-type MarkerFunc = (size: number, classPrefix: string, reverse?: boolean) => SVGElement | undefined
+type MarkerFunc = (size: number, reverse?: boolean) => SVGElement | undefined
 
 export const markerDefs: Record<MarkerType, MarkerFunc> = {
   arrow,

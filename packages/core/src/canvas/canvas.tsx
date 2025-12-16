@@ -2,15 +2,16 @@ import { Pos, Orientation, ScreenPos, CanvasPos, GraphPos, screenPos, canvasPos,
 import { Node } from './node'
 import { Seg } from './seg'
 import { Graph } from '../graph/graph'
-import { CanvasOptions, RenderNode, ThemeVars } from '../api/options'
+import { CanvasOptions, RenderNode, ThemeVars, EventsOptions, NewEdge } from '../api/options'
 import { NodeId, NodeKey, PublicNodeData, Node as GraphNode } from '../graph/node'
 import { SegId, Seg as GraphSeg } from '../graph/seg'
 import { logger } from '../log'
-import { markerDefs, styles as markerStyles } from './marker'
+import { markerDefs } from './marker'
+import { EditMode } from './editMode'
+import { renderNewEdge } from './newEdge'
+import { NewNodeModal, EditNodeModal, EditEdgeModal } from './modal'
 
-import styles from './canvas.css?raw'
-import zoomStyles from './zoom.css?raw'
-import styler from './styler'
+import styles from './styles.css?raw'
 
 const log = logger('canvas')
 
@@ -67,6 +68,7 @@ type CanvasData = Required<CanvasOptions<any>> & {
   renderNode: RenderNode<any>
   dummyNodeSize: number
   orientation: Orientation
+  events: EventsOptions<any, any>
 }
 
 export interface Canvas extends CanvasData { }
@@ -84,11 +86,15 @@ export class Canvas {
   updating: boolean
 
   // Pan-zoom state
-  private isPanning: boolean = false
-  private panStart: CanvasPos | null = null
-  private transformStart: ViewportTransform | null = null
   private panScale: { x: number, y: number } | null = null
   private zoomControls?: HTMLElement
+
+  // Edit mode state machine
+  editMode: EditMode
+  events: EventsOptions<any, any>
+
+  // New-edge visual element
+  private newEdgeEl?: SVGElement
 
   constructor(options: CanvasData) {
     Object.assign(this, options)
@@ -98,6 +104,9 @@ export class Canvas {
     this.updating = false
     this.bounds = { min: { x: 0, y: 0 }, max: { x: 0, y: 0 } }
     this.transform = { x: 0, y: 0, scale: 1 }
+    this.editMode = new EditMode()
+    this.editMode.editable = this.editable
+    this.events = options.events
     this.createMeasurementContainer()
     this.createCanvasContainer()
     if (this.panZoom) this.setupPanZoom()
@@ -214,11 +223,160 @@ export class Canvas {
   }
 
   private onClick(e: MouseEvent) {
-    console.log('click', e)
+    const hit = this.hitTest(e.clientX, e.clientY)
+
+    if (hit.type === 'node') {
+      const handler = this.events.nodeClick
+      if (handler) handler(hit.node.data.data)
+    } else if (hit.type === 'edge') {
+      // Look up segment to find the edge(s) it belongs to
+      const seg = this.curSegs.get(hit.segId)
+      if (seg && seg.edgeIds.length === 1) {
+        const handler = this.events.edgeClick
+        if (handler) handler(seg.edgeIds[0])
+      }
+    }
+    // Canvas click - could be used for deselection
+  }
+
+  private onDoubleClick(e: MouseEvent) {
+    const hit = this.hitTest(e.clientX, e.clientY)
+
+    if (hit.type === 'node') {
+      if (!this.editMode.editable) return
+      if (hit.node.isDummy) return // Dummy nodes can't be edited
+      const handler = this.events.editNode
+      if (handler) {
+        handler(hit.node.data.data, (updatedNode) => {
+          if (updatedNode) {
+            log.info('Node updated:', updatedNode)
+          }
+        })
+      } else {
+        this.showEditNodeModal(hit.node.data.data)
+      }
+    } else if (hit.type === 'edge') {
+      if (!this.editMode.editable) return
+
+      // Look up the segment to find which edge(s) it belongs to
+      const seg = this.curSegs.get(hit.segId)
+      if (!seg || seg.edgeIds.length !== 1) {
+        // Can only edit if segment belongs to exactly one edge
+        log.info('Cannot edit segment with', seg?.edgeIds.length ?? 0, 'edges')
+        return
+      }
+
+      const edgeId = seg.edgeIds[0]
+      const handler = this.events.editEdge
+      if (handler) {
+        handler(edgeId, (updatedEdge) => {
+          if (updatedEdge) {
+            log.info('Edge updated:', updatedEdge)
+          }
+        })
+      } else {
+        this.showEditEdgeModal(edgeId, seg)
+      }
+    } else {
+      // Double-click on empty canvas - trigger newNode
+      if (!this.editMode.editable) return
+      const screenCursor = screenPos(e.clientX, e.clientY)
+      const canvasCursor = this.screenToCanvas(screenCursor)
+      const graphCursor = this.canvasToGraph(canvasCursor)
+      this.handleNewNode(graphCursor)
+    }
+  }
+
+  /** Handle creating a new node at the given position */
+  handleNewNode(position: GraphPos) {
+    const handler = this.events.newNode
+    if (handler) {
+      // User-provided handler
+      handler((node) => {
+        if (node) {
+          this.handleAddNode(node, position)
+        }
+      })
+    } else {
+      this.showNewNodeModal(position)
+    }
+  }
+
+  /** Handle adding a node after newNode callback */
+  private handleAddNode(nodeData: any, position: GraphPos) {
+    const handler = this.events.addNode
+    if (handler) {
+      handler(nodeData, (node) => {
+        if (node) {
+          log.info('Node added:', node)
+          // The actual node addition will be handled by the API
+        }
+      })
+    } else {
+      log.info('addNode:', nodeData, 'at', position)
+    }
+  }
+
+  // ==================== Built-in Modals ====================
+
+  /** Show the new node modal */
+  private showNewNodeModal(position: GraphPos) {
+    const nodeTypes = Object.keys(this.nodeTypes)
+    const modal = new NewNodeModal({
+      nodeTypes: nodeTypes.length > 0 ? nodeTypes : undefined,
+      onSubmit: (data) => {
+        if (data) {
+          this.handleAddNode(data, position)
+        }
+      },
+    })
+    modal.show(document.body)
+  }
+
+  /** Show the edit node modal */
+  private showEditNodeModal(node: any) {
+    const nodeTypes = Object.keys(this.nodeTypes)
+    const modal = new EditNodeModal({
+      node,
+      nodeTypes: nodeTypes.length > 0 ? nodeTypes : undefined,
+      onSubmit: (data) => {
+        if (data) {
+          log.info('Node updated:', data)
+          // TODO: Apply node update via API
+        }
+      },
+      onDelete: () => {
+        log.info('Node deleted:', node)
+        // TODO: Remove node via API
+      },
+    })
+    modal.show(document.body)
+  }
+
+  /** Show the edit edge modal */
+  private showEditEdgeModal(edgeId: string, seg: Seg) {
+    const edgeTypes = Object.keys(this.edgeTypes)
+    const edge = { id: edgeId, source: seg.source, target: seg.target, type: seg.type }
+
+    const modal = new EditEdgeModal({
+      edge,
+      edgeTypes: edgeTypes.length > 0 ? edgeTypes : undefined,
+      onSubmit: (data) => {
+        if (data) {
+          log.info('Edge updated:', data)
+          // TODO: Apply edge update via API
+        }
+      },
+      onDelete: () => {
+        log.info('Edge deleted:', edgeId)
+        // TODO: Remove edge via API
+      },
+    })
+    modal.show(document.body)
   }
 
   private onContextMenu(e: MouseEvent) {
-    console.log('context menu', e)
+    // Context menu - could be used for right-click menus
   }
 
   private groupTransform(): string {
@@ -236,65 +394,61 @@ export class Canvas {
 
   private generateDynamicStyles(): string {
     let css = ''
-    const prefix = this.classPrefix
 
     // Global theme overrides
-    css += themeToCSS(this.theme, `.${prefix}-canvas-container`)
+    css += themeToCSS(this.theme, `.g3p-canvas-container`)
 
     // Node type styles
     for (const [type, vars] of Object.entries(this.nodeTypes)) {
-      css += themeToCSS(vars, `.${prefix}-node-type-${type}`, 'node')
+      css += themeToCSS(vars, `.g3p-node-type-${type}`, 'node')
     }
 
     // Edge type styles
     for (const [type, vars] of Object.entries(this.edgeTypes)) {
-      css += themeToCSS(vars, `.${prefix}-edge-type-${type}`)
+      css += themeToCSS(vars, `.g3p-edge-type-${type}`)
     }
 
     return css
   }
 
   private createCanvasContainer() {
-    // Inject marker styles
-    const markerStyleEl = document.createElement('style')
-    markerStyleEl.textContent = markerStyles
-    document.head.appendChild(markerStyleEl)
-
-    // Inject zoom control styles
-    const zoomStyleEl = document.createElement('style')
-    zoomStyleEl.textContent = zoomStyles
-    document.head.appendChild(zoomStyleEl)
-
-    // Inject dynamic theme styles
-    const dynamicStyles = this.generateDynamicStyles()
-    if (dynamicStyles) {
-      const themeStyleEl = document.createElement('style')
-      themeStyleEl.textContent = dynamicStyles
-      document.head.appendChild(themeStyleEl)
+    // Inject base styles once
+    if (!document.getElementById('g3p-styles')) {
+      const baseStyleEl = document.createElement('style')
+      baseStyleEl.id = 'g3p-styles'
+      baseStyleEl.textContent = styles
+      document.head.appendChild(baseStyleEl)
     }
 
-    const c = styler('canvas', styles, this.classPrefix)
+    // Always inject dynamic styles (node/edge types) for this canvas instance
+    const dynamicStyles = this.generateDynamicStyles()
+    if (dynamicStyles) {
+      const dynamicStyleEl = document.createElement('style')
+      dynamicStyleEl.textContent = dynamicStyles
+      document.head.appendChild(dynamicStyleEl)
+    }
 
     // Build color mode class
     const colorModeClass = this.colorMode !== 'system' ? `g3p-${this.colorMode}` : ''
 
     this.container = (<div
-      className={`${c('container')} ${colorModeClass}`.trim()}
+      className={`g3p-canvas-container ${colorModeClass}`.trim()}
       ref={(el: HTMLElement) => this.container = el}
       onContextMenu={this.onContextMenu.bind(this)}
     >
       <svg
         ref={(el: SVGElement) => this.root = el}
-        className={c('root')}
+        className="g3p-canvas-root"
         width={this.width}
         height={this.height}
         viewBox={this.viewBox()}
         preserveAspectRatio="xMidYMid meet"
         onClick={this.onClick.bind(this)}
+        onDblClick={this.onDoubleClick.bind(this)}
       >
         <defs>
-          {Object.values(markerDefs).map(marker => marker(this.markerSize, this.classPrefix, false))}
-          {Object.values(markerDefs).map(marker => marker(this.markerSize, this.classPrefix, true))}
+          {Object.values(markerDefs).map(marker => marker(this.markerSize, false))}
+          {Object.values(markerDefs).map(marker => marker(this.markerSize, true))}
         </defs>
         <g
           ref={(el: SVGElement) => this.group = el}
@@ -315,14 +469,41 @@ export class Canvas {
     document.addEventListener('mousemove', this.onMouseMove.bind(this))
     document.addEventListener('mouseup', this.onMouseUp.bind(this))
 
+    // Keyboard handler for escape to cancel new-edge mode
+    document.addEventListener('keydown', this.onKeyDown.bind(this))
+
     // Create zoom controls
     this.createZoomControls()
+  }
+
+  private onKeyDown(e: KeyboardEvent) {
+    if (e.key === 'Escape' && this.editMode.isCreatingEdge) {
+      this.endNewEdge(true) // cancelled
+    }
   }
 
   /** Convert screen coordinates to canvas-relative coordinates */
   private screenToCanvas(screen: ScreenPos): CanvasPos {
     const rect = this.container!.getBoundingClientRect()
     return canvasPos(screen.x - rect.left, screen.y - rect.top)
+  }
+
+  /** Convert canvas coordinates to graph coordinates */
+  private canvasToGraph(canvas: CanvasPos): GraphPos {
+    const vb = this.currentViewBox()
+    const { scale, offsetX, offsetY } = this.getEffectiveScale()
+
+    // Convert canvas position to graph position, accounting for centering
+    return graphPos(
+      vb.x - offsetX + canvas.x * scale,
+      vb.y - offsetY + canvas.y * scale
+    )
+  }
+
+  /** Convert screen coordinates to graph coordinates */
+  private screenToGraph(screen: ScreenPos): GraphPos {
+    const canvas = this.screenToCanvas(screen)
+    return this.canvasToGraph(canvas)
   }
 
   /** 
@@ -347,18 +528,6 @@ export class Canvas {
     const offsetY = (actualH - vb.h) / 2
 
     return { scale, offsetX, offsetY }
-  }
-
-  /** Convert canvas coordinates to graph coordinates */
-  private canvasToGraph(canvas: CanvasPos): GraphPos {
-    const vb = this.currentViewBox()
-    const { scale, offsetX, offsetY } = this.getEffectiveScale()
-
-    // Convert canvas position to graph position, accounting for centering
-    return graphPos(
-      vb.x - offsetX + canvas.x * scale,
-      vb.y - offsetY + canvas.y * scale
-    )
   }
 
   /** Get current viewBox as an object */
@@ -410,43 +579,82 @@ export class Canvas {
   }
 
   private onMouseDown(e: MouseEvent) {
-    // Only pan with left button, and not on interactive elements
+    // Only handle left button
     if (e.button !== 0) return
     if ((e.target as HTMLElement).closest('.g3p-zoom-controls')) return
 
-    this.isPanning = true
-    this.panStart = this.screenToCanvas(screenPos(e.clientX, e.clientY))
-    this.transformStart = { ...this.transform }
+    const hit = this.hitTest(e.clientX, e.clientY)
 
-    // Capture scale at start of pan so it stays consistent during drag
-    const { scale } = this.getEffectiveScale()
-    this.panScale = { x: scale, y: scale }
+    // In editable mode, start new-edge from node or port (not dummy nodes)
+    if (this.editMode.editable && (hit.type === 'node' || hit.type === 'port')) {
+      const node = hit.node
+      if (node.isDummy) return // Dummy nodes can't be edge endpoints
 
-    this.container!.style.cursor = 'grabbing'
-    e.preventDefault()
+      e.preventDefault()
+      e.stopPropagation()
+      const startGraph = this.screenToGraph(hit.center)
+      const portId = hit.type === 'port' ? hit.portId : undefined
+
+      this.startNewEdge(node.data.id, startGraph, portId)
+      return
+    }
+
+    // Start panning on canvas
+    if (hit.type === 'canvas' || hit.type === 'edge') {
+      const startCanvas = this.screenToCanvas(screenPos(e.clientX, e.clientY))
+      this.editMode.startPan(startCanvas, { ...this.transform })
+
+      const { scale } = this.getEffectiveScale()
+      this.panScale = { x: scale, y: scale }
+
+      this.container!.style.cursor = 'grabbing'
+      e.preventDefault()
+    }
   }
 
   private onMouseMove(e: MouseEvent) {
-    if (!this.isPanning || !this.panStart || !this.transformStart || !this.panScale) return
+    // Handle new-edge mode
+    if (this.editMode.isCreatingEdge) {
+      const screenCursor = screenPos(e.clientX, e.clientY)
+      const canvasCursor = this.screenToCanvas(screenCursor)
+      const graphCursor = this.canvasToGraph(canvasCursor)
+      this.editMode.updateNewEdgePosition(graphCursor)
+      this.updateNewEdgeVisual()
+
+      // Detect hover target using elementFromPoint
+      this.detectHoverTarget(e.clientX, e.clientY)
+      return
+    }
+
+    // Handle panning
+    if (!this.editMode.isPanning || !this.panScale) return
+
+    const panState = this.editMode.state
+    if (panState.type !== 'panning') return
 
     const current = this.screenToCanvas(screenPos(e.clientX, e.clientY))
 
     // Calculate delta in canvas pixels
-    const dx = current.x - this.panStart.x
-    const dy = current.y - this.panStart.y
+    const dx = current.x - panState.startCanvas.x
+    const dy = current.y - panState.startCanvas.y
 
     // Update transform using scale captured at pan start
-    this.transform.x = this.transformStart.x + dx * this.panScale.x
-    this.transform.y = this.transformStart.y + dy * this.panScale.y
+    this.transform.x = panState.startTransform.x + dx * this.panScale.x
+    this.transform.y = panState.startTransform.y + dy * this.panScale.y
 
     this.applyTransform()
   }
 
   private onMouseUp(e: MouseEvent) {
-    if (!this.isPanning) return
-    this.isPanning = false
-    this.panStart = null
-    this.transformStart = null
+    // Handle new-edge mode
+    if (this.editMode.isCreatingEdge) {
+      this.endNewEdge(false)
+      return
+    }
+
+    // Handle panning
+    if (!this.editMode.isPanning) return
+    this.editMode.reset()
     this.panScale = null
     this.container!.style.cursor = ''
   }
@@ -458,13 +666,11 @@ export class Canvas {
   }
 
   private createZoomControls() {
-    const c = styler('zoom', zoomStyles, this.classPrefix)
-
-    this.zoomControls = (<div className={c('controls')}>
-      <button className={c('btn')} onClick={() => this.zoomIn()}>+</button>
-      <div className={c('level')} id="g3p-zoom-level">100%</div>
-      <button className={c('btn')} onClick={() => this.zoomOut()}>−</button>
-      <button className={`${c('btn')} ${c('reset')}`} onClick={() => this.zoomReset()}>⟲</button>
+    this.zoomControls = (<div className="g3p-zoom-controls">
+      <button className="g3p-zoom-btn" onClick={() => this.zoomIn()}>+</button>
+      <div className="g3p-zoom-level" id="g3p-zoom-level">100%</div>
+      <button className="g3p-zoom-btn" onClick={() => this.zoomOut()}>−</button>
+      <button className="g3p-zoom-btn g3p-zoom-reset" onClick={() => this.zoomReset()}>⟲</button>
     </div>) as HTMLElement
 
     this.container!.appendChild(this.zoomControls)
@@ -491,4 +697,290 @@ export class Canvas {
     this.transform = { x: 0, y: 0, scale: 1 }
     this.applyTransform()
   }
+
+  // ==================== New-Edge Mode ====================
+
+  /** Start creating a new edge from a node */
+  startNewEdge(sourceNodeId: string, startGraph: GraphPos, sourcePortId?: string) {
+    this.editMode.startNewEdge(sourceNodeId, startGraph, sourcePortId)
+    this.updateNewEdgeVisual()
+    this.container!.style.cursor = 'crosshair'
+  }
+
+  /** Update the new-edge visual during drag */
+  private updateNewEdgeVisual() {
+    const state = this.editMode.getNewEdgeState()
+    if (!state) {
+      this.removeNewEdgeVisual()
+      return
+    }
+
+    // Remove old element
+    if (this.newEdgeEl) {
+      this.newEdgeEl.remove()
+    }
+
+    // Create new element
+    this.newEdgeEl = renderNewEdge({
+      start: state.startGraph,
+      end: state.currentGraph,
+    })
+
+    this.group!.appendChild(this.newEdgeEl)
+  }
+
+  /** Remove the new-edge visual */
+  private removeNewEdgeVisual() {
+    if (this.newEdgeEl) {
+      this.newEdgeEl.remove()
+      this.newEdgeEl = undefined
+    }
+  }
+
+  /** Complete or cancel the new-edge creation */
+  endNewEdge(cancelled: boolean = false) {
+    const state = this.editMode.getNewEdgeState()
+    if (!state) return
+
+    if (!cancelled) {
+      const { hoverTarget } = state
+      if (hoverTarget) {
+        if (hoverTarget.type === 'node' || hoverTarget.type === 'port') {
+          // Create edge to target
+          this.handleAddEdge(state, hoverTarget)
+        } else if (hoverTarget.type === 'canvas') {
+          // Create new node, then edge
+          this.handleNewNode(hoverTarget.position)
+        }
+      } else {
+        // Dropped on canvas without hover target - create new node at current position
+        this.handleNewNodeThenEdge(state)
+      }
+    }
+
+    this.removeNewEdgeVisual()
+    this.clearDropTargetHighlight()
+    this.editMode.reset()
+    this.container!.style.cursor = ''
+  }
+
+  /** Handle creating an edge after new-edge mode completes */
+  private handleAddEdge(
+    state: { sourceNodeId: string; sourcePortId?: string },
+    target: { type: 'node'; nodeId: string } | { type: 'port'; nodeId: string; portId: string }
+  ) {
+    // Find source and target nodes
+    const sourceNode = this.findNodeDataById(state.sourceNodeId)
+    const targetNode = this.findNodeDataById(target.nodeId)
+
+    if (!sourceNode || !targetNode) {
+      log.warn('Could not find source or target node for new edge')
+      return
+    }
+
+    const newEdge: NewEdge<any> = {
+      source: {
+        node: sourceNode,
+        portId: state.sourcePortId,
+      },
+      target: {
+        node: targetNode,
+        portId: target.type === 'port' ? target.portId : undefined,
+      },
+    }
+
+    const handler = this.events.addEdge
+    if (handler) {
+      handler(newEdge, (edge) => {
+        if (edge) {
+          log.info('Edge added:', edge)
+        }
+      })
+    } else {
+      log.info('addEdge (no handler):', newEdge)
+    }
+  }
+
+  /** Handle creating a new node then connecting an edge to it */
+  private handleNewNodeThenEdge(state: { sourceNodeId: string; sourcePortId?: string; currentGraph: GraphPos }) {
+    const handler = this.events.newNode
+    if (handler) {
+      handler((node) => {
+        if (node) {
+          // Node created, now add edge
+          const sourceNode = this.findNodeDataById(state.sourceNodeId)
+          if (sourceNode) {
+            const newEdge: NewEdge<any> = {
+              source: { node: sourceNode, portId: state.sourcePortId },
+              target: { node },
+            }
+            const addEdgeHandler = this.events.addEdge
+            if (addEdgeHandler) {
+              addEdgeHandler(newEdge, (edge) => {
+                if (edge) log.info('Edge added after new node:', edge)
+              })
+            }
+          }
+        }
+      })
+    } else {
+      // Default: show built-in modal (Phase 3)
+      log.info('newNode then edge at', state.currentGraph)
+    }
+  }
+
+  /** Find node data by internal ID */
+  private findNodeDataById(nodeId: string): any | null {
+    for (const node of this.curNodes.values()) {
+      if (node.data?.id === nodeId) {
+        return node.data.data
+      }
+    }
+    return null
+  }
+
+  /** Set hover target for new-edge mode */
+  setNewEdgeHoverTarget(nodeId: string, portId?: string) {
+    // Clear previous highlight
+    this.clearDropTargetHighlight()
+
+    if (portId) {
+      this.editMode.setHoverTarget({ type: 'port', nodeId, portId })
+      // Highlight the port
+      const portEl = this.container?.querySelector(`.g3p-node-port[data-node-id="${nodeId}"][data-port-id="${portId}"]`)
+      if (portEl) portEl.classList.add('g3p-drop-target')
+    } else {
+      this.editMode.setHoverTarget({ type: 'node', nodeId })
+      // Highlight the node
+      const node = this.curNodes.get(nodeId)
+      if (node?.container) node.container.classList.add('g3p-drop-target')
+    }
+  }
+
+  /** Clear hover target for new-edge mode */
+  clearNewEdgeHoverTarget() {
+    this.clearDropTargetHighlight()
+    this.editMode.setHoverTarget(null)
+  }
+
+  /** Remove drop target highlight from all elements */
+  private clearDropTargetHighlight() {
+    // Clear from nodes
+    for (const node of this.curNodes.values()) {
+      node.container?.classList.remove('g3p-drop-target')
+    }
+    // Clear from ports
+    this.container?.querySelectorAll('.g3p-drop-target').forEach(el => {
+      el.classList.remove('g3p-drop-target')
+    })
+  }
+
+  /** Detect hover target during new-edge drag using elementFromPoint */
+  private detectHoverTarget(clientX: number, clientY: number) {
+    // Temporarily hide the new-edge visual so it doesn't block hit testing
+    if (this.newEdgeEl) {
+      this.newEdgeEl.style.display = 'none'
+    }
+
+    const el = document.elementFromPoint(clientX, clientY)
+
+    // Restore the new-edge visual
+    if (this.newEdgeEl) {
+      this.newEdgeEl.style.display = ''
+    }
+
+    if (!el) {
+      this.clearNewEdgeHoverTarget()
+      return
+    }
+
+    // Check for port first (more specific)
+    const portEl = el.closest('.g3p-node-port')
+    if (portEl) {
+      const nodeId = portEl.getAttribute('data-node-id')
+      const portId = portEl.getAttribute('data-port-id')
+      if (nodeId && portId) {
+        const node = this.curNodes.get(nodeId)
+        if (node && !node.isDummy) {
+          this.setNewEdgeHoverTarget(nodeId, portId)
+          return
+        }
+      }
+    }
+
+    // Check for node container
+    const nodeEl = el.closest('.g3p-node-container')
+    if (nodeEl) {
+      const nodeId = nodeEl.getAttribute('data-node-id')
+      if (nodeId) {
+        const node = this.curNodes.get(nodeId)
+        if (node && !node.isDummy) {
+          this.setNewEdgeHoverTarget(node.data.id)
+          return
+        }
+      }
+    }
+
+    // Not over a node or port
+    this.clearNewEdgeHoverTarget()
+  }
+
+  // ==================== Hit Testing ====================
+
+  /** Result of a hit test */
+  private hitTest(clientX: number, clientY: number): HitTestResult {
+    const el = document.elementFromPoint(clientX, clientY)
+    if (!el) return { type: 'canvas' }
+
+    const getCenter = (el: Element) => {
+      const rect = el.getBoundingClientRect()
+      return screenPos(rect.left + rect.width / 2, rect.top + rect.height / 2)
+    }
+
+    // Check for port first (more specific)
+    const portEl = el.closest('.g3p-node-port')
+    if (portEl) {
+      const nodeId = portEl.getAttribute('data-node-id')
+      const portId = portEl.getAttribute('data-port-id')
+      if (nodeId && portId) {
+        const center = getCenter(portEl)
+        const node = this.curNodes.get(nodeId)
+        if (node) {
+          return { type: 'port', node, portId, center }
+        }
+      }
+    }
+
+    // Check for node
+    const nodeEl = el.closest('.g3p-node-container')
+    if (nodeEl) {
+      const nodeId = nodeEl.getAttribute('data-node-id')
+      if (nodeId) {
+        const borderEl = el.closest('.g3p-node-border')
+        const center = getCenter(borderEl ?? nodeEl)
+        const node = this.curNodes.get(nodeId)
+        if (node) {
+          return { type: 'node', node, center }
+        }
+      }
+    }
+
+    // Check for edge (segment)
+    const edgeEl = el.closest('.g3p-seg-container')
+    if (edgeEl) {
+      const segId = edgeEl.getAttribute('data-edge-id')
+      if (segId) {
+        return { type: 'edge', segId }
+      }
+    }
+
+    return { type: 'canvas' }
+  }
 }
+
+/** Hit test result types */
+type HitTestResult =
+  | { type: 'canvas' }
+  | { type: 'node'; node: Node, center: ScreenPos }
+  | { type: 'port'; node: Node; portId: string, center: ScreenPos }
+  | { type: 'edge'; segId: string }

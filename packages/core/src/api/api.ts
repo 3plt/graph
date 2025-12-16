@@ -17,6 +17,7 @@ type State<N, E> = {
   update: Update<N, E> | null
 }
 
+/** Core graph API */
 export class API<N, E> {
   private state: State<N, E>
   private seq: State<N, E>[]
@@ -51,6 +52,7 @@ export class API<N, E> {
       ...this.options.canvas,
       dummyNodeSize: this.options.graph.dummyNodeSize,
       orientation: this.options.graph.orientation,
+      events: args.options?.events ?? {},
     })
 
     // store initial update or history
@@ -63,6 +65,7 @@ export class API<N, E> {
     }
   }
 
+  /** Initialize the API */
   async init() {
     const root = document.getElementById(this.root)
     if (!root) throw new Error('root element not found')
@@ -71,6 +74,7 @@ export class API<N, E> {
       await this.applyUpdate(update)
   }
 
+  /** Navigate to a different state */
   nav(nav: Nav) {
     let newIndex: number
     switch (nav) {
@@ -122,27 +126,45 @@ export class API<N, E> {
     this.canvas.update()
   }
 
+  /** Add a node */
   async addNode(node: any) {
     await this.update(update => update.addNode(node))
   }
 
+  /** Delete a node */
   async deleteNode(node: any) {
     await this.update(update => update.deleteNode(node))
   }
 
+  /** Update a node */
   async updateNode(node: any) {
     await this.update(update => update.updateNode(node))
   }
 
+  /** Add an edge */
   async addEdge(edge: any) {
     await this.update(update => update.addEdge(edge))
   }
 
+  /** Delete an edge */
   async deleteEdge(edge: any) {
     await this.update(update => update.deleteEdge(edge))
   }
 
-  async applyUpdate(update: Update<N, E>) {
+  /** Update an edge */
+  async updateEdge(edge: any) {
+    await this.update(update => update.updateEdge(edge))
+  }
+
+  /** Perform a batch of updates */
+  async update(callback: (updater: Updater<N, E>) => void) {
+    // collect updates from the caller
+    const updater = new Updater<N, E>()
+    callback(updater)
+    await this.applyUpdate(updater.update)
+  }
+
+  private async applyUpdate(update: Update<N, E>) {
     log.info('applyUpdate', update)
     // create nodes in canvas and wait for their measurements
     const nodes = await this.measureNodes(update)
@@ -176,13 +198,6 @@ export class API<N, E> {
       if (!node.isDummy)
         this.canvas.getNode(node.key).setPos(node.pos!)
     }
-  }
-
-  async update(callback: (updater: Updater<N, E>) => void) {
-    // collect updates from the caller
-    const updater = new Updater<N, E>()
-    callback(updater)
-    await this.applyUpdate(updater.update)
   }
 
   private async measureNodes(update: Update<N, E>): Promise<Map<N, Node>> {

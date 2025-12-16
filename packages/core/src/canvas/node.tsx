@@ -1,14 +1,6 @@
 import { Dims, Pos, Orientation, Dir } from '../common'
 import { Canvas } from './canvas'
 import { PublicNodeData } from '../graph/node'
-import { logger } from '../log'
-
-import styles from './node.css?raw'
-import styler from './styler'
-
-const log = logger('canvas')
-
-export type NodeEvent = (node: any, e: MouseEvent) => void
 
 export class Node {
   selected: boolean
@@ -17,7 +9,6 @@ export class Node {
   content!: HTMLElement
   canvas: Canvas
   data: PublicNodeData
-  classPrefix: string
   isDummy: boolean
   pos?: Pos
 
@@ -26,7 +17,6 @@ export class Node {
     this.data = data
     this.selected = false
     this.hovered = false
-    this.classPrefix = canvas.classPrefix
     this.isDummy = isDummy
 
     if (this.isDummy) {
@@ -54,34 +44,6 @@ export class Node {
     return !this.isDummy
   }
 
-  handleClick(e: MouseEvent) {
-    e.stopPropagation()
-    // this.onClick?.(this.data, e)
-  }
-
-  handleMouseEnter(e: MouseEvent) {
-    // this.onMouseEnter?.(this.data, e)
-  }
-
-  handleMouseLeave(e: MouseEvent) {
-    // this.onMouseLeave?.(this.data, e)
-  }
-
-  handleContextMenu(e: MouseEvent) {
-    // if (this.onContextMenu) {
-    //   e.stopPropagation()
-    //   this.onContextMenu(this.data, e)
-    // }
-  }
-
-  handleMouseDown(e: MouseEvent) {
-    // this.onMouseDown?.(this.data, e)
-  }
-
-  handleMouseUp(e: MouseEvent) {
-    // this.onMouseUp?.(this.data, e)
-  }
-
   setPos(pos: Pos) {
     this.pos = pos
     const { x, y } = pos
@@ -102,21 +64,14 @@ export class Node {
   }
 
   renderContainer() {
-    const c = styler('node', styles, this.classPrefix)
     const hasPorts = this.hasPorts()
     const inner = this.isDummy ? this.renderDummy() : this.renderForeign()
     const nodeType = this.data?.type
     const typeClass = nodeType ? `g3p-node-type-${nodeType}` : ''
     this.container = (
       <g
-        className={`${c('container')} ${c('dummy', this.isDummy)} ${typeClass}`.trim()}
-        onClick={(e) => this.handleClick(e)}
-        onMouseEnter={(e) => this.handleMouseEnter(e)}
-        onMouseLeave={(e) => this.handleMouseLeave(e)}
-        onContextMenu={(e) => this.handleContextMenu(e)}
-        onMouseDown={(e) => this.handleMouseDown(e)}
-        onMouseUp={(e) => this.handleMouseUp(e)}
-        style={{ cursor: 'pointer' }}
+        className={`g3p-node-container ${this.isDummy ? 'g3p-node-dummy' : ''} ${typeClass}`.trim()}
+        data-node-id={this.data?.id}
       >
         {inner}
       </g>
@@ -133,7 +88,6 @@ export class Node {
   }
 
   renderDummy(): SVGElement {
-    const c = styler('node', styles, this.classPrefix)
     let w = this.canvas.dummyNodeSize
     let h = this.canvas.dummyNodeSize
     w /= 2
@@ -141,12 +95,12 @@ export class Node {
     return (<g>
       <ellipse
         cx={w} cy={h} rx={w} ry={h}
-        className={c('background')}
+        className="g3p-node-background"
       />
       <ellipse
         cx={w} cy={h} rx={w} ry={h}
         fill="none"
-        className={c('border')}
+        className="g3p-node-border"
       />
     </g>) as SVGElement
   }
@@ -159,7 +113,7 @@ export class Node {
       const ports = data.ports?.[dir]
       if (!ports) continue
       for (const port of ports) {
-        const el = this.content.querySelector(`#g3p-port-${data.id}-${port.id}`)
+        const el = this.content.querySelector(`.g3p-node-port[data-node-id="${data.id}"][data-port-id="${port.id}"]`)
         if (!el) continue
         const portRect = el.getBoundingClientRect()
         if (isVertical) {
@@ -202,7 +156,6 @@ export class Node {
     const ports = this.data?.ports?.[dir]
     if (!ports?.length) return null
 
-    const c = styler('node', styles, this.classPrefix)
     const pos = this.getPortPosition(dir)
     const isVertical = this.isVerticalOrientation()
     const layoutClass = isVertical ? 'row' : 'col'
@@ -210,11 +163,12 @@ export class Node {
     const rotateClass = rotateLabels ? `port-rotated-${pos}` : ''
 
     return (
-      <div className={`${c('ports')} ${c(`ports-${layoutClass}`)}`}>
+      <div className={`g3p-node-ports g3p-node-ports-${layoutClass}`}>
         {ports.map(port => (
           <div
-            id={`g3p-port-${this.data!.id}-${port.id}`}
-            className={`${c('port')} ${c(`port-${inout}-${pos}`)} ${c(rotateClass)}`}
+            className={`g3p-node-port g3p-node-port-${inout}-${pos} ${rotateClass}`}
+            data-node-id={this.data!.id}
+            data-port-id={port.id}
           >
             {port.label ?? port.id}
           </div>
@@ -224,7 +178,6 @@ export class Node {
   }
 
   renderInsidePorts(el: HTMLElement): HTMLElement {
-    const c = styler('node', styles, this.classPrefix)
     const isVertical = this.isVerticalOrientation()
     const isReversed = this.isReversedOrientation()
     let inPorts = this.renderPortRow('in', 'in')
@@ -235,7 +188,7 @@ export class Node {
     const wrapperClass = isVertical ? 'v' : 'h'
 
     return (
-      <div className={`${c('with-ports')} ${c(`with-ports-${wrapperClass}`)}`}>
+      <div className={`g3p-node-with-ports g3p-node-with-ports-${wrapperClass}`}>
         {inPorts}
         {el}
         {outPorts}
@@ -244,7 +197,6 @@ export class Node {
   }
 
   renderOutsidePorts(el: HTMLElement): HTMLElement {
-    const c = styler('node', styles, this.classPrefix)
     const isVertical = this.isVerticalOrientation()
     const isReversed = this.isReversedOrientation()
     let inPorts = this.renderPortRow('in', 'out')
@@ -255,7 +207,7 @@ export class Node {
     const wrapperClass = isVertical ? 'v' : 'h'
 
     return (
-      <div className={`${c('with-ports')} ${c(`with-ports-${wrapperClass}`)}`}>
+      <div className={`g3p-node-with-ports g3p-node-with-ports-${wrapperClass}`}>
         {inPorts}
         {el}
         {outPorts}
@@ -264,8 +216,7 @@ export class Node {
   }
 
   renderBorder(el: HTMLElement): HTMLElement {
-    const c = styler('node', styles, this.classPrefix)
-    return <div className={c('border')}>
+    return <div className="g3p-node-border">
       {el}
     </div> as HTMLElement
   }

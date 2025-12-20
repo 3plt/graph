@@ -2,9 +2,8 @@ import { CanvasPos, GraphPos } from '../common'
 
 /** Target for edge drop */
 export type EdgeDropTarget =
-  | { type: 'node'; nodeId: string }
-  | { type: 'port'; nodeId: string; portId: string }
-  | { type: 'canvas'; position: GraphPos }
+  | { type: 'node'; id: string; port?: string }
+  | { type: 'canvas' }
   | null
 
 /**
@@ -13,7 +12,7 @@ export type EdgeDropTarget =
 export type EditState =
   | { type: 'idle' }
   | { type: 'panning'; startCanvas: CanvasPos; startTransform: { x: number; y: number; scale: number } }
-  | { type: 'new-edge'; sourceNodeId: string; sourcePortId?: string; startGraph: GraphPos; currentGraph: GraphPos; hoverTarget: EdgeDropTarget }
+  | { type: 'new-edge'; source: { id: string, port?: string }; startGraph: GraphPos; currentGraph: GraphPos; target: EdgeDropTarget }
 
 /**
  * Edit mode state machine for the canvas.
@@ -56,15 +55,14 @@ export class EditMode {
   }
 
   /** Start creating a new edge from a node or port */
-  startNewEdge(sourceNodeId: string, startGraph: GraphPos, sourcePortId?: string): void {
+  startNewEdge(id: string, startGraph: GraphPos, port?: string): void {
     if (!this._editable) return
     this._state = {
       type: 'new-edge',
-      sourceNodeId,
-      sourcePortId,
+      source: { id, port },
       startGraph,
       currentGraph: startGraph,
-      hoverTarget: null,
+      target: null,
     }
   }
 
@@ -78,7 +76,7 @@ export class EditMode {
   /** Update the hover target during new-edge mode */
   setHoverTarget(target: EdgeDropTarget): void {
     if (this._state.type === 'new-edge') {
-      this._state = { ...this._state, hoverTarget: target }
+      this._state = { ...this._state, target }
     }
   }
 

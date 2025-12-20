@@ -1,10 +1,12 @@
 import { Graph } from '../graph/graph'
 import { Canvas } from '../canvas/canvas'
-import { PublicEdgeData } from '../graph/edge'
+import { EdgeId, PublicEdgeData } from '../graph/edge'
+import { SegId } from '../graph/seg'
 import { Mutator } from '../graph/mutator'
-import { APIArguments, Update, NodeProps, EdgeProps, EdgeEnd } from './options'
+import { MarkerType } from '../canvas/marker'
+import { APIArguments, Update, NodeProps, EdgeProps, EdgeEnd, EventsOptions, NewNode, NewEdge } from './options'
 import { Defaults, applyDefaults } from './defaults'
-import { PublicNodeData } from '../graph/node'
+import { PublicNodeData, NodeId, PortId } from '../graph/node'
 import { Node } from '../canvas/node'
 import { Nav, Dir } from '../common'
 import { Updater } from './updater'
@@ -17,12 +19,23 @@ type State<N, E> = {
   update: Update<N, E> | null
 }
 
+export type EditNodeProps = NewNode & {
+  id: string
+}
+
+export type EditEdgeProps = {
+  id: string
+  type?: string
+  source: { id: string, port?: string, marker?: MarkerType }
+  target: { id: string, port?: string, marker?: MarkerType }
+}
+
 /** Core graph API */
 export class API<N, E> {
   private state: State<N, E>
   private seq: State<N, E>[]
   private index: number
-  private canvas: Canvas
+  private canvas: Canvas<N, E>
   private options: Defaults<N, E>
   private history: Update<N, E>[]
   private nodeIds: Map<N, string>
@@ -30,6 +43,7 @@ export class API<N, E> {
   private nodeVersions: Map<N, number>
   private nextNodeId: number
   private nextEdgeId: number
+  private events: EventsOptions<N, E>
   private root: string
 
   constructor(args: APIArguments<N, E>) {
@@ -39,6 +53,7 @@ export class API<N, E> {
     // build initial empty graph
     let graph = new Graph({ options: this.options.graph })
     this.state = { graph, update: null }
+    this.events = args.events || {}
     this.seq = [this.state]
     this.index = 0
     this.nodeIds = new Map()
@@ -48,11 +63,10 @@ export class API<N, E> {
     this.nextEdgeId = 1
 
     // create canvas
-    this.canvas = new Canvas({
+    this.canvas = new Canvas<N, E>(this, {
       ...this.options.canvas,
       dummyNodeSize: this.options.graph.dummyNodeSize,
       orientation: this.options.graph.orientation,
-      events: args.options?.events ?? {},
     })
 
     // store initial update or history
@@ -63,6 +77,10 @@ export class API<N, E> {
     } else {
       this.history = []
     }
+  }
+
+  private get graph() {
+    return this.state.graph
   }
 
   /** Initialize the API */
@@ -127,32 +145,32 @@ export class API<N, E> {
   }
 
   /** Add a node */
-  async addNode(node: any) {
+  async addNode(node: N) {
     await this.update(update => update.addNode(node))
   }
 
   /** Delete a node */
-  async deleteNode(node: any) {
+  async deleteNode(node: N) {
     await this.update(update => update.deleteNode(node))
   }
 
   /** Update a node */
-  async updateNode(node: any) {
+  async updateNode(node: N) {
     await this.update(update => update.updateNode(node))
   }
 
   /** Add an edge */
-  async addEdge(edge: any) {
+  async addEdge(edge: E) {
     await this.update(update => update.addEdge(edge))
   }
 
   /** Delete an edge */
-  async deleteEdge(edge: any) {
+  async deleteEdge(edge: E) {
     await this.update(update => update.deleteEdge(edge))
   }
 
   /** Update an edge */
-  async updateEdge(edge: any) {
+  async updateEdge(edge: E) {
     await this.update(update => update.updateEdge(edge))
   }
 
@@ -269,13 +287,21 @@ export class API<N, E> {
   }
 
   private parsePorts(ports?: NodeProps<N>['ports']): PublicNodeData['ports'] {
-    const fixed: PublicNodeData['ports'] = { in: null, out: null }
+    const fixed: PublicNodeData['ports'] = {}
     for (const key of ['in', 'out'] as Dir[]) {
       if (ports?.[key] && ports[key].length > 0)
         fixed[key] = ports[key].map(port =>
           typeof port == 'string' ? { id: port } : port)
     }
     return fixed
+  }
+
+  getNode(id: NodeId): PublicNodeData {
+    return this.graph.getNode(id)
+  }
+
+  getEdge(id: EdgeId): PublicEdgeData {
+    return this.graph.getEdge(id)
   }
 
   private getNodeId(node: N): string {
@@ -341,5 +367,123 @@ export class API<N, E> {
     const data = this.parseEdge(edge)
     if (data.id !== id) throw new Error(`edge id changed from ${id} to ${data.id}`)
     mut.updateEdge(data)
+  }
+
+  // Evemt Handlers
+
+  handleClickNode(id: NodeId) {
+    const handler = this.events.nodeClick
+    const node = this.graph.getNode(id)
+    if (handler) handler(node.data)
+  }
+
+  handleClickEdge(id: SegId) {
+    const handler = this.events.edgeClick
+    if (!handler) return
+    const seg = this.graph.getSeg(id)
+    if (seg.edgeIds.size != 1) return
+    const edge = this.graph.getEdge(seg.edgeIds.values().next().value)
+    handler(edge.data)
+  }
+
+  async handleNewNode() {
+    const gotNode = async (node: N) => {
+      await this.addNode(node)
+    }
+    if (this.events.newNode)
+      this.events.newNode(gotNode)
+    else
+      this.canvas.showNewNodeModal(async (data) => {
+        if (this.events.addNode)
+          this.events.addNode(data, gotNode)
+        else
+          await gotNode(data as N)
+      })
+  }
+
+  async handleNewNodeFrom(source: { id: string, port?: string }) {
+    const gotNode = async (node: N) => {
+      const gotEdge = async (edge: E) => {
+        await this.update(u => {
+          u.addNode(node).addEdge(edge)
+        })
+      }
+      const newEdge = { source, target: node }
+      if (this.events.addEdge)
+        this.events.addEdge(newEdge, gotEdge)
+      else
+        await gotEdge(newEdge as E)
+    }
+    if (this.events.newNode)
+      this.events.newNode(gotNode)
+    else
+      this.canvas.showNewNodeModal(async (data: NewNode) => {
+        if (this.events.addNode)
+          this.events.addNode(data, gotNode)
+        else
+          await gotNode(data as N)
+      })
+  }
+
+  async handleEditNode(id: NodeId) {
+    const node = this.graph.getNode(id)
+    const gotNode = async (node: N) => {
+      if (node) await this.updateNode(node)
+    }
+    if (this.events.editNode)
+      this.events.editNode(node.data, gotNode)
+    else
+      this.canvas.showEditNodeModal(node, async (data: EditNodeProps) => {
+        if (this.events.updateNode)
+          this.events.updateNode(node.data, data, gotNode)
+        else
+          await gotNode(data as N)
+      })
+  }
+
+  async handleEditEdge(id: SegId) {
+    const seg = this.graph.getSeg(id)
+    if (seg.edgeIds.size != 1) return
+    const edge = this.graph.getEdge(seg.edgeIds.values().next().value)
+    const gotEdge = async (edge: E | null) => {
+      if (edge) await this.updateEdge(edge)
+    }
+    if (this.events.editEdge)
+      this.events.editEdge(edge.data, gotEdge)
+    else
+      this.canvas.showEditEdgeModal(edge, async (data: EditEdgeProps) => {
+        if (this.events.updateEdge)
+          this.events.updateEdge(edge.data, data, gotEdge)
+      })
+  }
+
+  async handleAddEdge(data: NewEdge<N>) {
+    const gotEdge = async (edge: E | null) => {
+      if (edge) await this.addEdge(edge)
+    }
+    if (this.events.addEdge)
+      this.events.addEdge(data, gotEdge)
+    else
+      await gotEdge(data as E)
+  }
+
+  async handleDeleteNode(id: NodeId) {
+    const node = this.getNode(id)
+    if (this.events.removeNode)
+      this.events.removeNode(node.data, async (remove) => {
+        if (remove) await this.deleteNode(node.data)
+      })
+    else
+      await this.deleteNode(node.data)
+  }
+
+  async handleDeleteEdge(id: EdgeId) {
+    const edge = this.getEdge(id)
+    if (this.events.removeEdge)
+      this.events.removeEdge(edge.data, async (remove) => {
+        if (remove) await this.deleteEdge(edge.data)
+      })
+    else
+      await this.deleteEdge(edge.data)
   }
 }

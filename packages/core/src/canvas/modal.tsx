@@ -1,4 +1,9 @@
 import { ScreenPos } from '../common'
+import { MarkerType } from './marker'
+import { PublicEdgeData } from '../graph/edge'
+import { PublicNodeData } from '../graph/node'
+import { EditEdgeProps, EditNodeProps } from '../api/api'
+import { NewNode } from '../api/options'
 
 export type ModalResult<T> = T | null
 
@@ -92,9 +97,9 @@ export class Modal {
 // ==================== New Node Modal ====================
 
 export interface NewNodeModalOptions {
-  position?: ScreenPos
   nodeTypes?: string[]
-  onSubmit: (data: { label: string; type?: string } | null) => void
+  onSubmit: (data: NewNode) => void
+  onCancel?: () => void
 }
 
 export class NewNodeModal extends Modal {
@@ -105,8 +110,7 @@ export class NewNodeModal extends Modal {
   constructor(options: NewNodeModalOptions) {
     super({
       title: 'New Node',
-      position: options.position,
-      onClose: () => options.onSubmit(null),
+      onClose: () => options.onCancel?.()
     })
     this.submitCallback = options.onSubmit
     this.renderBody(options.nodeTypes)
@@ -173,7 +177,7 @@ export class NewNodeModal extends Modal {
       return
     }
 
-    const data: { label: string; type?: string } = { label }
+    const data: NewNode = { text: label }
     if (this.typeSelect?.value) {
       data.type = this.typeSelect.value
     }
@@ -187,11 +191,12 @@ export class NewNodeModal extends Modal {
 // ==================== Edit Node Modal ====================
 
 export interface EditNodeModalOptions {
-  node: any
+  node: EditNodeProps
   position?: ScreenPos
   nodeTypes?: string[]
-  onSubmit: (data: any | null) => void
+  onSubmit: (data: EditNodeProps) => void
   onDelete?: () => void
+  onCancel?: () => void
 }
 
 export class EditNodeModal extends Modal {
@@ -205,7 +210,7 @@ export class EditNodeModal extends Modal {
     super({
       title: 'Edit Node',
       position: options.position,
-      onClose: () => options.onSubmit(null),
+      onClose: () => options.onCancel?.()
     })
     this.node = options.node
     this.submitCallback = options.onSubmit
@@ -302,13 +307,11 @@ export class EditNodeModal extends Modal {
 
 // ==================== Edit Edge Modal ====================
 
-export type MarkerType = 'none' | 'arrow' | 'circle' | 'diamond' | 'bar'
-
 export interface EditEdgeModalOptions {
-  edge: any
-  position?: ScreenPos
+  edge: EditEdgeProps
   edgeTypes?: string[]
-  onSubmit: (data: any | null) => void
+  onSubmit: (data: EditEdgeProps) => void
+  onCancel?: () => void
   onDelete?: () => void
 }
 
@@ -316,7 +319,7 @@ export class EditEdgeModal extends Modal {
   private sourceMarkerSelect!: HTMLSelectElement
   private targetMarkerSelect!: HTMLSelectElement
   private typeSelect?: HTMLSelectElement
-  private edge: any
+  private edge: EditEdgeProps
   private submitCallback: EditEdgeModalOptions['onSubmit']
   private deleteCallback?: () => void
 
@@ -325,8 +328,7 @@ export class EditEdgeModal extends Modal {
   constructor(options: EditEdgeModalOptions) {
     super({
       title: 'Edit Edge',
-      position: options.position,
-      onClose: () => options.onSubmit(null),
+      onClose: () => options.onCancel?.()
     })
     this.edge = options.edge
     this.submitCallback = options.onSubmit
@@ -418,15 +420,15 @@ export class EditEdgeModal extends Modal {
   }
 
   private submit() {
-    const data = {
+    const data: EditEdgeProps = {
       ...this.edge,
       source: {
         ...this.edge.source,
-        marker: this.sourceMarkerSelect.value === 'none' ? undefined : this.sourceMarkerSelect.value,
+        marker: this.sourceMarkerSelect.value === 'none' ? undefined : this.sourceMarkerSelect.value as MarkerType,
       },
       target: {
         ...this.edge.target,
-        marker: this.targetMarkerSelect.value === 'none' ? undefined : this.targetMarkerSelect.value,
+        marker: this.targetMarkerSelect.value === 'none' ? undefined : this.targetMarkerSelect.value as MarkerType,
       },
     }
 

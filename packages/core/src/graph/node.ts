@@ -25,7 +25,7 @@ export type PublicNodeData = {
   title?: string
   text?: string
   type?: string
-  ports: { in: PortData[] | null, out: PortData[] | null }
+  ports: { in?: PortData[], out?: PortData[] }
   render?: RenderNode<any>
   dims?: Dims
 }
@@ -52,7 +52,7 @@ const defNodeData: NodeData = {
   text: undefined,
   type: undefined,
   render: undefined,
-  ports: { in: null, out: null },
+  ports: {},
   aligned: {},
   edges: { in: ISet(), out: ISet() },
   segs: { in: ISet(), out: ISet() },

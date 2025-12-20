@@ -2,56 +2,19 @@ import { Pos, Orientation, ScreenPos, CanvasPos, GraphPos, screenPos, canvasPos,
 import { Node } from './node'
 import { Seg } from './seg'
 import { Graph } from '../graph/graph'
-import { CanvasOptions, RenderNode, ThemeVars, EventsOptions, NewEdge } from '../api/options'
-import { NodeId, NodeKey, PublicNodeData, Node as GraphNode } from '../graph/node'
+import { CanvasOptions, RenderNode, ThemeVars, NewEdge, NewNode } from '../api/options'
+import { NodeId, NodeKey, PublicNodeData, PortId, Node as GraphNode } from '../graph/node'
 import { SegId, Seg as GraphSeg } from '../graph/seg'
 import { logger } from '../log'
 import { markerDefs } from './marker'
 import { EditMode } from './editMode'
 import { renderNewEdge } from './newEdge'
 import { NewNodeModal, EditNodeModal, EditEdgeModal } from './modal'
+import { API, EditNodeProps, EditEdgeProps } from '../api/api'
 
 import styles from './styles.css?raw'
 
 const log = logger('canvas')
-
-/** Maps ThemeVars property names to CSS variable names */
-const themeVarMap: Partial<Record<keyof ThemeVars, string>> = {
-  // Canvas
-  bg: '--g3p-bg',
-  shadow: '--g3p-shadow',
-  // Node
-  border: '--g3p-border',
-  borderHover: '--g3p-border-hover',
-  borderSelected: '--g3p-border-selected',
-  text: '--g3p-text',
-  textMuted: '--g3p-text-muted',
-  // Port
-  bgHover: '--g3p-port-bg-hover',
-  // Edge
-  color: '--g3p-edge-color',
-}
-
-function themeToCSS(theme: ThemeVars, selector: string, prefix: string = ''): string {
-  const entries = Object.entries(theme).filter(([_, v]) => v !== undefined)
-  if (!entries.length) return ''
-
-  let css = `${selector} {\n`
-  for (const [key, value] of entries) {
-    let cssVar = themeVarMap[key as keyof ThemeVars]
-    // Handle 'bg' specially based on context (node vs port)
-    if (key === 'bg' && prefix === 'node') {
-      cssVar = '--g3p-bg-node'
-    } else if (key === 'bg' && prefix === 'port') {
-      cssVar = '--g3p-port-bg'
-    }
-    if (cssVar) {
-      css += `  ${cssVar}: ${value};\n`
-    }
-  }
-  css += '}\n'
-  return css
-}
 
 type ViewportTransform = {
   x: number
@@ -64,16 +27,15 @@ type Bounds = {
   max: Pos
 }
 
-type CanvasData = Required<CanvasOptions<any>> & {
-  renderNode: RenderNode<any>
+type CanvasData<N, E> = Required<CanvasOptions<N>> & {
+  renderNode: RenderNode<N>
   dummyNodeSize: number
   orientation: Orientation
-  events: EventsOptions<any, any>
 }
 
-export interface Canvas extends CanvasData { }
+export interface Canvas<N, E> extends CanvasData<N, E> { }
 
-export class Canvas {
+export class Canvas<N, E> {
   container?: HTMLElement
   root?: SVGElement
   group?: SVGElement
@@ -91,13 +53,14 @@ export class Canvas {
 
   // Edit mode state machine
   editMode: EditMode
-  events: EventsOptions<any, any>
+  api: API<N, E>
 
   // New-edge visual element
   private newEdgeEl?: SVGElement
 
-  constructor(options: CanvasData) {
+  constructor(api: API<N, E>, options: CanvasData<N, E>) {
     Object.assign(this, options)
+    this.api = api
     this.allNodes = new Map()
     this.curNodes = new Map()
     this.curSegs = new Map()
@@ -106,7 +69,6 @@ export class Canvas {
     this.transform = { x: 0, y: 0, scale: 1 }
     this.editMode = new EditMode()
     this.editMode.editable = this.editable
-    this.events = options.events
     this.createMeasurementContainer()
     this.createCanvasContainer()
     if (this.panZoom) this.setupPanZoom()
@@ -222,155 +184,61 @@ export class Canvas {
     return newNodes
   }
 
+  // ========== Mouse event handlers ========== 
+
   private onClick(e: MouseEvent) {
     const hit = this.hitTest(e.clientX, e.clientY)
-
     if (hit.type === 'node') {
-      const handler = this.events.nodeClick
-      if (handler) handler(hit.node.data.data)
+      this.api.handleClickNode(hit.node.data.id)
     } else if (hit.type === 'edge') {
-      // Look up segment to find the edge(s) it belongs to
-      const seg = this.curSegs.get(hit.segId)
-      if (seg && seg.edgeIds.length === 1) {
-        const handler = this.events.edgeClick
-        if (handler) handler(seg.edgeIds[0])
-      }
+      this.api.handleClickEdge(hit.segId)
     }
-    // Canvas click - could be used for deselection
   }
 
   private onDoubleClick(e: MouseEvent) {
+    if (!this.editMode.editable) return
     const hit = this.hitTest(e.clientX, e.clientY)
-
     if (hit.type === 'node') {
-      if (!this.editMode.editable) return
-      if (hit.node.isDummy) return // Dummy nodes can't be edited
-      const handler = this.events.editNode
-      if (handler) {
-        handler(hit.node.data.data, (updatedNode) => {
-          if (updatedNode) {
-            log.info('Node updated:', updatedNode)
-          }
-        })
-      } else {
-        this.showEditNodeModal(hit.node.data.data)
-      }
+      if (hit.node.isDummy) return
+      this.api.handleEditNode(hit.node.data.id)
     } else if (hit.type === 'edge') {
-      if (!this.editMode.editable) return
-
-      // Look up the segment to find which edge(s) it belongs to
-      const seg = this.curSegs.get(hit.segId)
-      if (!seg || seg.edgeIds.length !== 1) {
-        // Can only edit if segment belongs to exactly one edge
-        log.info('Cannot edit segment with', seg?.edgeIds.length ?? 0, 'edges')
-        return
-      }
-
-      const edgeId = seg.edgeIds[0]
-      const handler = this.events.editEdge
-      if (handler) {
-        handler(edgeId, (updatedEdge) => {
-          if (updatedEdge) {
-            log.info('Edge updated:', updatedEdge)
-          }
-        })
-      } else {
-        this.showEditEdgeModal(edgeId, seg)
-      }
+      this.api.handleEditEdge(hit.segId)
     } else {
-      // Double-click on empty canvas - trigger newNode
-      if (!this.editMode.editable) return
-      const screenCursor = screenPos(e.clientX, e.clientY)
-      const canvasCursor = this.screenToCanvas(screenCursor)
-      const graphCursor = this.canvasToGraph(canvasCursor)
-      this.handleNewNode(graphCursor)
+      this.api.handleNewNode()
     }
   }
 
-  /** Handle creating a new node at the given position */
-  handleNewNode(position: GraphPos) {
-    const handler = this.events.newNode
-    if (handler) {
-      // User-provided handler
-      handler((node) => {
-        if (node) {
-          this.handleAddNode(node, position)
-        }
-      })
-    } else {
-      this.showNewNodeModal(position)
-    }
-  }
-
-  /** Handle adding a node after newNode callback */
-  private handleAddNode(nodeData: any, position: GraphPos) {
-    const handler = this.events.addNode
-    if (handler) {
-      handler(nodeData, (node) => {
-        if (node) {
-          log.info('Node added:', node)
-          // The actual node addition will be handled by the API
-        }
-      })
-    } else {
-      log.info('addNode:', nodeData, 'at', position)
-    }
-  }
-
-  // ==================== Built-in Modals ====================
+  // ========== Built-in Modals ========== 
 
   /** Show the new node modal */
-  private showNewNodeModal(position: GraphPos) {
+  showNewNodeModal(callback: (data: NewNode) => void) {
     const nodeTypes = Object.keys(this.nodeTypes)
     const modal = new NewNodeModal({
       nodeTypes: nodeTypes.length > 0 ? nodeTypes : undefined,
-      onSubmit: (data) => {
-        if (data) {
-          this.handleAddNode(data, position)
-        }
-      },
+      onSubmit: (data) => { callback(data) }
     })
     modal.show(document.body)
   }
 
   /** Show the edit node modal */
-  private showEditNodeModal(node: any) {
+  showEditNodeModal(node: EditNodeProps, callback: (data: EditNodeProps) => void) {
     const nodeTypes = Object.keys(this.nodeTypes)
     const modal = new EditNodeModal({
       node,
       nodeTypes: nodeTypes.length > 0 ? nodeTypes : undefined,
-      onSubmit: (data) => {
-        if (data) {
-          log.info('Node updated:', data)
-          // TODO: Apply node update via API
-        }
-      },
-      onDelete: () => {
-        log.info('Node deleted:', node)
-        // TODO: Remove node via API
-      },
+      onSubmit: (data) => { callback(data) },
+      onDelete: () => { this.api.handleDeleteNode(node.id) }
     })
     modal.show(document.body)
   }
 
   /** Show the edit edge modal */
-  private showEditEdgeModal(edgeId: string, seg: Seg) {
-    const edgeTypes = Object.keys(this.edgeTypes)
-    const edge = { id: edgeId, source: seg.source, target: seg.target, type: seg.type }
-
+  showEditEdgeModal(edge: EditEdgeProps, callback: (data: EditEdgeProps) => void) {
     const modal = new EditEdgeModal({
       edge,
-      edgeTypes: edgeTypes.length > 0 ? edgeTypes : undefined,
-      onSubmit: (data) => {
-        if (data) {
-          log.info('Edge updated:', data)
-          // TODO: Apply edge update via API
-        }
-      },
-      onDelete: () => {
-        log.info('Edge deleted:', edgeId)
-        // TODO: Remove edge via API
-      },
+      edgeTypes: Object.keys(this.edgeTypes),
+      onSubmit: callback,
+      onDelete: () => { this.api.handleDeleteEdge(edge.id) },
     })
     modal.show(document.body)
   }
@@ -593,7 +461,7 @@ export class Canvas {
       e.preventDefault()
       e.stopPropagation()
       const startGraph = this.screenToGraph(hit.center)
-      const portId = hit.type === 'port' ? hit.portId : undefined
+      const portId = hit.type === 'port' ? hit.port : undefined
 
       this.startNewEdge(node.data.id, startGraph, portId)
       return
@@ -743,18 +611,11 @@ export class Canvas {
     if (!state) return
 
     if (!cancelled) {
-      const { hoverTarget } = state
-      if (hoverTarget) {
-        if (hoverTarget.type === 'node' || hoverTarget.type === 'port') {
-          // Create edge to target
-          this.handleAddEdge(state, hoverTarget)
-        } else if (hoverTarget.type === 'canvas') {
-          // Create new node, then edge
-          this.handleNewNode(hoverTarget.position)
-        }
+      const { target, source } = state
+      if (target?.type == 'node') {
+        this.api.handleAddEdge({ source, target })
       } else {
-        // Dropped on canvas without hover target - create new node at current position
-        this.handleNewNodeThenEdge(state)
+        this.api.handleNewNodeFrom(source)
       }
     }
 
@@ -762,71 +623,6 @@ export class Canvas {
     this.clearDropTargetHighlight()
     this.editMode.reset()
     this.container!.style.cursor = ''
-  }
-
-  /** Handle creating an edge after new-edge mode completes */
-  private handleAddEdge(
-    state: { sourceNodeId: string; sourcePortId?: string },
-    target: { type: 'node'; nodeId: string } | { type: 'port'; nodeId: string; portId: string }
-  ) {
-    // Find source and target nodes
-    const sourceNode = this.findNodeDataById(state.sourceNodeId)
-    const targetNode = this.findNodeDataById(target.nodeId)
-
-    if (!sourceNode || !targetNode) {
-      log.warn('Could not find source or target node for new edge')
-      return
-    }
-
-    const newEdge: NewEdge<any> = {
-      source: {
-        node: sourceNode,
-        portId: state.sourcePortId,
-      },
-      target: {
-        node: targetNode,
-        portId: target.type === 'port' ? target.portId : undefined,
-      },
-    }
-
-    const handler = this.events.addEdge
-    if (handler) {
-      handler(newEdge, (edge) => {
-        if (edge) {
-          log.info('Edge added:', edge)
-        }
-      })
-    } else {
-      log.info('addEdge (no handler):', newEdge)
-    }
-  }
-
-  /** Handle creating a new node then connecting an edge to it */
-  private handleNewNodeThenEdge(state: { sourceNodeId: string; sourcePortId?: string; currentGraph: GraphPos }) {
-    const handler = this.events.newNode
-    if (handler) {
-      handler((node) => {
-        if (node) {
-          // Node created, now add edge
-          const sourceNode = this.findNodeDataById(state.sourceNodeId)
-          if (sourceNode) {
-            const newEdge: NewEdge<any> = {
-              source: { node: sourceNode, portId: state.sourcePortId },
-              target: { node },
-            }
-            const addEdgeHandler = this.events.addEdge
-            if (addEdgeHandler) {
-              addEdgeHandler(newEdge, (edge) => {
-                if (edge) log.info('Edge added after new node:', edge)
-              })
-            }
-          }
-        }
-      })
-    } else {
-      // Default: show built-in modal (Phase 3)
-      log.info('newNode then edge at', state.currentGraph)
-    }
   }
 
   /** Find node data by internal ID */
@@ -840,19 +636,15 @@ export class Canvas {
   }
 
   /** Set hover target for new-edge mode */
-  setNewEdgeHoverTarget(nodeId: string, portId?: string) {
+  setNewEdgeHoverTarget(id: string, port?: string) {
     // Clear previous highlight
     this.clearDropTargetHighlight()
-
-    if (portId) {
-      this.editMode.setHoverTarget({ type: 'port', nodeId, portId })
-      // Highlight the port
-      const portEl = this.container?.querySelector(`.g3p-node-port[data-node-id="${nodeId}"][data-port-id="${portId}"]`)
+    this.editMode.setHoverTarget({ type: 'node', id, port })
+    if (port) {
+      const portEl = this.container?.querySelector(`.g3p-node-port[data-node-id="${id}"][data-port-id="${port}"]`)
       if (portEl) portEl.classList.add('g3p-drop-target')
     } else {
-      this.editMode.setHoverTarget({ type: 'node', nodeId })
-      // Highlight the node
-      const node = this.curNodes.get(nodeId)
+      const node = this.curNodes.get(id)
       if (node?.container) node.container.classList.add('g3p-drop-target')
     }
   }
@@ -946,7 +738,7 @@ export class Canvas {
         const center = getCenter(portEl)
         const node = this.curNodes.get(nodeId)
         if (node) {
-          return { type: 'port', node, portId, center }
+          return { type: 'port', node, port: portId, center }
         }
       }
     }
@@ -982,5 +774,43 @@ export class Canvas {
 type HitTestResult =
   | { type: 'canvas' }
   | { type: 'node'; node: Node, center: ScreenPos }
-  | { type: 'port'; node: Node; portId: string, center: ScreenPos }
+  | { type: 'port'; node: Node; port: string, center: ScreenPos }
   | { type: 'edge'; segId: string }
+
+/** Maps ThemeVars property names to CSS variable names */
+const themeVarMap: Partial<Record<keyof ThemeVars, string>> = {
+  // Canvas
+  bg: '--g3p-bg',
+  shadow: '--g3p-shadow',
+  // Node
+  border: '--g3p-border',
+  borderHover: '--g3p-border-hover',
+  borderSelected: '--g3p-border-selected',
+  text: '--g3p-text',
+  textMuted: '--g3p-text-muted',
+  // Port
+  bgHover: '--g3p-port-bg-hover',
+  // Edge
+  color: '--g3p-edge-color',
+}
+
+function themeToCSS(theme: ThemeVars, selector: string, prefix: string = ''): string {
+  const entries = Object.entries(theme).filter(([_, v]) => v !== undefined)
+  if (!entries.length) return ''
+
+  let css = `${selector} {\n`
+  for (const [key, value] of entries) {
+    let cssVar = themeVarMap[key as keyof ThemeVars]
+    // Handle 'bg' specially based on context (node vs port)
+    if (key === 'bg' && prefix === 'node') {
+      cssVar = '--g3p-bg-node'
+    } else if (key === 'bg' && prefix === 'port') {
+      cssVar = '--g3p-port-bg'
+    }
+    if (cssVar) {
+      css += `  ${cssVar}: ${value};\n`
+    }
+  }
+  css += '}\n'
+  return css
+}

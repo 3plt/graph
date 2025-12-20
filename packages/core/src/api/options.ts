@@ -25,6 +25,8 @@ export type APIArguments<N, E> = {
   edges?: E[]
   /** Initial history */
   history?: Update<N, E>[]
+  /** Events */
+  events?: EventsOptions<N, E>
   /** Root element ID */
   root: string
 }
@@ -37,8 +39,6 @@ export type APIOptions<N, E> = {
   canvas?: CanvasOptions<N>
   /** Options for node and edge properties */
   props?: PropsOptions<N, E>
-  /** Events that can be handled by the user */
-  events?: EventsOptions<N, E>
 }
 
 /** Options for the graph */
@@ -88,19 +88,23 @@ export type EventsOptions<N, E> = {
   /** Called when the cursor leaves an edge */
   edgeLeave?: (edge: E) => void
   /** Called when a node is double-clicked */
-  editNode?: (node: N, callback: (node: N | null) => void) => void
+  editNode?: (node: N, callback: (node: N) => void) => void
   /** Called when a node should be added */
-  newNode?: (callback: (node: N | null) => void) => void
+  newNode?: (callback: (node: N) => void) => void
   /** Called when an edge is double-clicked */
-  editEdge?: (edge: E, callback: (edge: E | null) => void) => void
+  editEdge?: (edge: E, callback: (edge: E) => void) => void
   /** Called when a node should be added */
-  addNode?: (node: NewNode, callback: (node: N | null) => void) => void
+  addNode?: (node: NewNode, callback: (node: N) => void) => void
   /** Called when an edge should be added */
-  addEdge?: (edge: NewEdge<N>, callback: (edge: E | null) => void) => void
+  addEdge?: (edge: NewEdge<N>, callback: (edge: E) => void) => void
   /** Called when an edge should be removed */
   removeEdge?: (edge: E, callback: (remove: boolean) => void) => void
   /** Called when a node should be removed */
   removeNode?: (node: N, callback: (remove: boolean) => void) => void
+  /** Called when a node should be updated */
+  updateNode?: (node: N, update: NewNode, callback: (node: N) => void) => void
+  /** Called when an edge should be updated */
+  updateEdge?: (edge: E, update: NewEdge<N>, callback: (edge: E) => void) => void
 }
 
 /** Function to render a node */
@@ -291,19 +295,8 @@ export type NewNode = {
 /** New edge properties */
 export type NewEdge<N> = {
   /** Source node */
-  source: {
-    /** Source node object */
-    node: N,
-    /** Source port ID */
-    portId?: string
-  }
-  /** Target node */
-  target: {
-    /** Target node object */
-    node: N,
-    /** Target port ID */
-    portId?: string
-  }
+  source: EdgeEnd<N>,
+  target: EdgeEnd<N>,
 }
 
 /** Edge end properties */

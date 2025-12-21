@@ -117,7 +117,6 @@ export class Canvas<N, E> {
     if (gnode.isDummy) {
       node = new Node(this, gnode, true)
       node.renderContainer()
-      node.setPos(gnode.pos!)
       this.allNodes.set(key, node)
     } else {
       if (!this.allNodes.has(key))
@@ -126,6 +125,7 @@ export class Canvas<N, E> {
     }
     this.curNodes.set(gnode.id, node)
     node.append()
+    node.setPos(gnode.pos!)
   }
 
   updateNode(gnode: GraphNode) {
@@ -151,10 +151,10 @@ export class Canvas<N, E> {
     seg.append()
   }
 
-  updateSeg(gseg: GraphSeg) {
+  updateSeg(gseg: GraphSeg, g: Graph) {
     const seg = this.curSegs.get(gseg.id)
     if (!seg) throw new Error('seg not found')
-    seg.update(gseg)
+    seg.update(gseg, g)
   }
 
   deleteSeg(gseg: GraphSeg) {
@@ -176,7 +176,7 @@ export class Canvas<N, E> {
     for (const node of newNodes.values()) {
       node.measure(isVertical)
       const { id, version } = node.data!
-      const key = `${id}:${version}`
+      const key = `k:${id}:${version}`
       this.allNodes.set(key, node)
       node.renderContainer()
     }

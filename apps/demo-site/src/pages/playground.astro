@@ -65,6 +65,15 @@ import { examples, exampleList } from '../examples';
     </div>
 
     <div class="graph-area">
+      <div class="graph-toolbar">
+        <div class="nav-controls">
+          <button class="nav-btn" id="nav-first" title="First (Home)">⏮</button>
+          <button class="nav-btn" id="nav-prev" title="Previous (←)">◀</button>
+          <button class="nav-btn" id="nav-next" title="Next (→)">▶</button>
+          <button class="nav-btn" id="nav-last" title="Last (End)">⏭</button>
+        </div>
+        <button class="nav-btn" id="rebuild" title="Rebuild graph from scratch">🔄 Rebuild</button>
+      </div>
       <div class="graph-container" id="playground-graph"></div>
     </div>
   </main>
@@ -158,11 +167,44 @@ import { examples, exampleList } from '../examples';
     flex: 1;
     padding: 1.5rem;
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .graph-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .nav-controls {
+    display: flex;
+    gap: 0.25rem;
+  }
+
+  .nav-btn {
+    padding: 0.5rem 0.75rem;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: 0.25rem;
+    cursor: pointer;
+    font-size: 0.875rem;
+    color: var(--color-text);
+    transition: all 0.15s;
+  }
+
+  .nav-btn:hover:not(:disabled) {
+    background: var(--color-border);
+  }
+
+  .nav-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
   }
 
   .graph-container {
-    width: 100%;
-    height: 100%;
+    flex: 1;
     background: var(--color-bg);
     border-radius: 0.75rem;
     box-shadow: var(--shadow-md);
@@ -236,6 +278,36 @@ import { examples, exampleList } from '../examples';
   // Auto-apply when any option changes
   document.querySelectorAll('.options select, .options input').forEach(el => {
     el.addEventListener('change', renderGraph);
+  });
+
+  // Navigation controls
+  document.getElementById('nav-first')?.addEventListener('click', () => currentGraph?.nav('first'));
+  document.getElementById('nav-prev')?.addEventListener('click', () => currentGraph?.nav('prev'));
+  document.getElementById('nav-next')?.addEventListener('click', () => currentGraph?.nav('next'));
+  document.getElementById('nav-last')?.addEventListener('click', () => currentGraph?.nav('last'));
+
+  // Rebuild button
+  document.getElementById('rebuild')?.addEventListener('click', () => currentGraph?.rebuild());
+
+  // Keyboard shortcuts for navigation
+  document.addEventListener('keydown', (e) => {
+    if (!currentGraph) return;
+    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) return;
+    
+    switch (e.key) {
+      case 'Home':
+        currentGraph.nav('first');
+        break;
+      case 'End':
+        currentGraph.nav('last');
+        break;
+      case 'ArrowLeft':
+        currentGraph.nav('prev');
+        break;
+      case 'ArrowRight':
+        currentGraph.nav('next');
+        break;
+    }
   });
 
   // Initial render

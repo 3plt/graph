@@ -11,6 +11,9 @@ import { Dummy } from './services/dummy'
 import { Layers } from './services/layers'
 import { Layout } from './services/layout'
 import { Lines } from './services/lines'
+import { logger } from '../log'
+
+const log = logger('graph')
 
 type GraphArgs = {
   changes?: Changes

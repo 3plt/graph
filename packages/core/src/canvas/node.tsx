@@ -32,7 +32,6 @@ export class Node {
   }
 
   append() {
-    console.log('append', this)
     this.canvas.group!.appendChild(this.container)
   }
 

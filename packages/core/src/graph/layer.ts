@@ -49,7 +49,7 @@ export class Layer extends Record(defLayerData) {
     }).asImmutable()
   }
 
-  get size(): number {
+  get nodeCount(): number {
     return this.nodeIds.size
   }
 
@@ -116,9 +116,8 @@ export class Layer extends Record(defLayerData) {
   reindex(g: Graph, nodeId: NodeId): NodeId[] | undefined {
     if (!this.isSorted) return undefined
     const sorted = this.sorted.filter(id => id != nodeId)
-    const idx = this.sorted.findIndex(id => id == nodeId)
-    for (let i = idx; i < sorted.length; i++)
-      g.getNode(sorted[i]).setIndex(g, i)
+    for (const [i, id] of this.sorted.entries())
+      g.getNode(id).setIndex(g, i)
     return sorted
   }
 

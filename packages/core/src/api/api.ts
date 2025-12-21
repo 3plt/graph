@@ -127,18 +127,30 @@ export class API<N, E> {
       if (!newNode) this.canvas.deleteNode(oldNode)
     }
     for (const newNode of newGraph.nodes.values()) {
-      if (!oldGraph.nodes.has(newNode.id)) this.canvas.addNode(newNode)
+      const oldNode = oldGraph.nodes.get(newNode.id)
+      if (!oldNode) {
+        this.canvas.addNode(newNode)
+      } else if (oldNode.key !== newNode.key) {
+        // Node version changed (e.g., during rebuild) - delete old and add new
+        this.canvas.deleteNode(oldNode)
+        this.canvas.addNode(newNode)
+      } else if (oldNode.pos !== newNode.pos) {
+        // Same node, just update position
+        this.canvas.getNode(newNode.key).setPos(newNode.pos!)
+      }
     }
     for (const oldSeg of oldGraph.segs.values()) {
       const newSeg = newGraph.segs.get(oldSeg.id)
-      if (!newSeg)
+      if (!newSeg) {
         this.canvas.deleteSeg(oldSeg)
-      else if (oldSeg.svg != newSeg.svg)
-        this.canvas.updateSeg(newSeg)
+      } else if (oldSeg !== newSeg) {
+        this.canvas.updateSeg(newSeg, newGraph)
+      }
     }
     for (const newSeg of newGraph.segs.values()) {
-      if (!oldGraph.segs.has(newSeg.id))
+      if (!oldGraph.segs.has(newSeg.id)) {
         this.canvas.addSeg(newSeg, newGraph)
+      }
     }
 
     this.canvas.update()
@@ -180,6 +192,23 @@ export class API<N, E> {
     const updater = new Updater<N, E>()
     callback(updater)
     await this.applyUpdate(updater.update)
+  }
+
+  /** Rebuild the graph from scratch (removes all then re-adds all nodes/edges) */
+  async rebuild() {
+    // Collect current nodes and edges from the nodeIds/edgeIds maps
+    const nodes: N[] = [...this.nodeIds.keys()]
+    const edges: E[] = [...this.edgeIds.keys()]
+
+    await this.update(updater => {
+      updater.describe('Rebuild')
+      // Remove all edges first, then nodes
+      for (const edge of edges) updater.deleteEdge(edge)
+      for (const node of nodes) updater.deleteNode(node)
+      // Re-add all nodes first, then edges
+      for (const node of nodes) updater.addNode(node)
+      for (const edge of edges) updater.addEdge(edge)
+    })
   }
 
   private async applyUpdate(update: Update<N, E>) {
@@ -325,7 +354,6 @@ export class API<N, E> {
   private _addNode(node: Node, mut: Mutator) {
     const { data, id: newId } = node.data!
     const oldId = this.nodeIds.get(data)
-    console.log('addNode', node, oldId, newId)
     if (oldId && oldId != newId)
       throw new Error(`node id of ${data} changed from ${oldId} to ${newId}`)
     this.nodeIds.set(data, newId)

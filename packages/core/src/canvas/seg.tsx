@@ -37,11 +37,11 @@ export class Seg {
     this.el!.remove()
   }
 
-  update(data: GraphSeg) {
+  update(data: GraphSeg, g: Graph) {
     this.svg = data.svg!
     this.type = data.type
-    this.source = data.source
-    this.target = data.target
+    this.source = { ...data.source, isDummy: data.sourceNode(g).isDummy }
+    this.target = { ...data.target, isDummy: data.targetNode(g).isDummy }
     this.edgeIds = data.edgeIds.toArray()
     this.remove()
     this.el = this.render()

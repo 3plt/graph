@@ -4,6 +4,9 @@ interface Props {
 }
 
 const { title } = Astro.props;
+const IS_DEV = import.meta.env.DEV;
+const LOG_INGEST_URL = import.meta.env.VITE_LOG_INGEST_URL;
+const LOG_LEVEL = import.meta.env.VITE_LOG_LEVEL || 'info';
 ---
 
 <!doctype html>
@@ -15,6 +18,53 @@ const { title } = Astro.props;
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="generator" content={Astro.generator} />
     <title>{title}</title>
+    <script is:inline define:vars={{ IS_DEV, LOG_INGEST_URL, LOG_LEVEL }}>
+      (function(){
+        var IS_DEV_VAL = IS_DEV;
+        var ENDPOINT_VAL = LOG_INGEST_URL || '';
+        var LOG_LEVEL_VAL = LOG_LEVEL || 'info';
+        if (IS_DEV_VAL && ENDPOINT_VAL) {
+          window['__LOG_INGEST_URL'] = ENDPOINT_VAL;
+          window['__LOG_LEVEL'] = LOG_LEVEL_VAL;
+          try { console.log('[demo-site] logging configured', { endpoint: ENDPOINT_VAL, level: LOG_LEVEL_VAL }) } catch {}
+        }
+        // Forward uncaught errors to collector (if set)
+        function sendLine(obj) {
+          try {
+            var url = window['__LOG_INGEST_URL'];
+            if (!url) return;
+            var line = JSON.stringify(Object.assign({}, obj, { ts: Date.now() })) + '\n';
+            // Always use fetch with no-cors and omit credentials to avoid CORS preflight and credentials
+            fetch(url, {
+              method: 'POST',
+              mode: 'no-cors',
+              credentials: 'omit',
+              body: line,
+              keepalive: true,
+            }).catch(() => {});
+          } catch {}
+        }
+        window.addEventListener('error', function(e) {
+          sendLine({
+            level: 'error',
+            type: 'window.error',
+            message: e.message,
+            filename: e.filename,
+            lineno: e.lineno,
+            colno: e.colno,
+          });
+        });
+        window.addEventListener('unhandledrejection', function(e) {
+          var reason = (e && e.reason) ? e.reason : {};
+          sendLine({
+            level: 'error',
+            type: 'unhandledrejection',
+            message: (reason && reason.message) ? reason.message : String(reason),
+            stack: reason && reason.stack,
+          });
+        });
+      })();
+    </script>
   </head>
   <body>
     <slot />

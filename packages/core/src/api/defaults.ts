@@ -43,7 +43,6 @@ function defaults<N, E>(): Defaults<N, E> {
     },
     canvas: {
       renderNode,
-      classPrefix: 'g3p',
       width: '100%',
       height: '100%',
       padding: 20,

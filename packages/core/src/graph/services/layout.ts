@@ -28,8 +28,8 @@ export class Layout {
     if (a.isDummy && !b.isDummy) return -1
     if (!a.isDummy && b.isDummy) return 1
     if (!a.isDummy) return a.id.localeCompare(b.id)
-    const minA = a.edgeId ?? Seq(a.edgeIds).min()
-    const minB = b.edgeId ?? Seq(b.edgeIds).min()
+    const minA = Seq(a.edgeIds).min()!
+    const minB = Seq(b.edgeIds).min()!
     return minA.localeCompare(minB)
   }
 
@@ -55,7 +55,12 @@ export class Layout {
         let node = g.getNode(sorted[i])
         node = node.setIndex(g, i).setLayerPos(g, lpos)
         const size = node.dims?.[g.w] ?? 0
-        lpos += size + g.options.nodeMargin
+        let margin = node.margin(g)
+        if (i + 1 < sorted.length) {
+          const next = g.getNode(sorted[i + 1])
+          margin = node.marginWith(g, next)
+        }
+        lpos += size + margin
       }
     }
   }
@@ -164,7 +169,7 @@ export class Layout {
   static anchorPos(g: Graph, seg: Seg, side: Side): Pos {
     const nodeId = seg[side].id
     const node = g.getNode(nodeId)
-    let p: Pos = { x: 0, y: 0, [g.x]: node.lpos!, ...(node.pos || {}) }
+    let p = { [g.x]: node.lpos!, [g.y]: node.pos?.[g.y] ?? 0 } as Pos
     let w = node.dims?.[g.w] ?? 0
     let h = node.dims?.[g.h] ?? 0
 
@@ -225,22 +230,21 @@ export class Layout {
     conservative: boolean
   ) {
     const node = g.getNode(nodeId)
-    log.debug(`shift ${nodeId} (at ${node.lpos}) to ${alignId} (at ${lpos})`) // XXX
     if (!conservative)
       Layout.markAligned(g, nodeId, alignId, dir, lpos)
-    const space = g.options.nodeMargin
-    const nodeWidth = node.dims?.[g.w] ?? 0
-    const aMin = lpos - space, aMax = lpos + nodeWidth + space
+    const nodeRight = lpos + node.width(g)
     repeat:
     for (const otherId of node.getLayer(g).nodeIds) {
       if (otherId == nodeId) continue
       const other = g.getNode(otherId)
-      const opos = other.lpos!
-      const otherWidth = other.dims?.[g.w] ?? 0
-      const bMin = opos, bMax = opos + otherWidth
-      if (aMin < bMax && bMin < aMax) {
+      const margin = node.marginWith(g, other)
+      // Calculate gap using proposed lpos, not current node.lpos
+      const gap = (lpos < other.lpos!)
+        ? other.lpos! - nodeRight
+        : lpos - other.right(g)
+      if (gap < margin) {
         if (conservative) return false
-        const safePos = reverseMove ? aMin - otherWidth : aMax
+        const safePos = reverseMove ? lpos - other.width(g) - margin : nodeRight + margin
         Layout.shiftNode(g, otherId, undefined, dir, safePos, reverseMove, conservative)
         continue repeat
       }
@@ -294,11 +298,12 @@ export class Layout {
     for (const layerId of g.layerList) {
       const layer = g.getLayer(layerId)
       if (layer.sorted.length < 2) continue
-      for (const nodeId of layer.sorted) {
+      for (const [i, nodeId] of layer.sorted.entries()) {
         const node = g.getNode(nodeId)
         if (node.index == 0) continue
         let minGap = Infinity
         const stack = []
+        let maxMargin = 0
         for (const right of Layout.aligned(g, nodeId, 'both')) {
           stack.push(right)
           const leftId = Layout.leftOf(g, right)
@@ -307,8 +312,11 @@ export class Layout {
           const leftWidth = left.dims?.[g.w] ?? 0
           const gap = right.lpos! - left.lpos! - leftWidth
           if (gap < minGap) minGap = gap
+          // Use margin between right and its left neighbor
+          const margin = right.marginWith(g, left)
+          if (margin > maxMargin) maxMargin = margin
         }
-        const delta = minGap - g.options.nodeMargin
+        const delta = minGap - maxMargin
         if (delta <= 0) continue
         anyChanged = true
         for (const right of stack)

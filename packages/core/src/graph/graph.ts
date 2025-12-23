@@ -11,6 +11,9 @@ import { Dummy } from './services/dummy'
 import { Layers } from './services/layers'
 import { Layout } from './services/layout'
 import { Lines } from './services/lines'
+import { logger } from '../log'
+
+const log = logger('graph')
 
 type GraphArgs = {
   changes?: Changes
@@ -102,6 +105,7 @@ export class Graph {
       this.applyChanges()
       Cycles.checkCycles(this)
       Layers.updateLayers(this)
+      /* debug removed */
       Dummy.updateDummies(this)
       Dummy.mergeDummies(this)
       Layout.positionNodes(this)

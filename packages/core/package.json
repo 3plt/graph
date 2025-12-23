@@ -37,6 +37,7 @@
   "dependencies": {
     "immutable": "^5.1.4",
     "jsx-dom": "^8.1.6",
+    "pino": "^9.5.0",
     "winston": "^3.18.3",
     "winston-transport": "^4.9.0"
   }

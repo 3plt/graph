@@ -18,7 +18,6 @@ export type PublicEdgeData = {
   source: { id: string, port?: string, marker?: MarkerType }
   target: { id: string, port?: string, marker?: MarkerType }
   type?: string
-  style?: EdgeStyle
 }
 
 type EdgeData = PublicEdgeData & {
@@ -33,7 +32,6 @@ const defEdgeData: EdgeData = {
   source: { id: '' },
   target: { id: '' },
   type: undefined,
-  style: undefined,
   mutable: false,
   segIds: [],
 }
@@ -130,7 +128,7 @@ export class Edge extends Record(defEdgeData) {
       source = edge.source.id
       if (edge.source?.port)
         source = `${source}.${edge.source.port}`
-      const marker = edge.source?.marker ?? edge.style?.marker?.source
+      const marker = edge.source?.marker
       if (marker && marker != 'none') source += `[${marker}]`
       source += '-'
     }
@@ -140,7 +138,7 @@ export class Edge extends Record(defEdgeData) {
       if (edge.target.port)
         target = `${target}.${edge.target.port}`
       target = '-' + target
-      const marker = edge.target?.marker ?? edge.style?.marker?.target ?? 'arrow'
+      const marker = edge.target?.marker ?? 'arrow'
       if (marker && marker != 'none') target += `[${marker}]`
     }
     const type = edge.type || ''

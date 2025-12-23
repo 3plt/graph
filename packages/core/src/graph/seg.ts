@@ -20,7 +20,6 @@ type SegData = {
   source: SegEnd
   target: SegEnd
   type?: string
-  style?: EdgeStyle
   edgeIds: ISet<EdgeId>
   trackPos?: number
   svg?: string
@@ -32,7 +31,6 @@ const defSegData: SegData = {
   source: { id: '' },
   target: { id: '' },
   type: undefined,
-  style: undefined,
   edgeIds: ISet(),
   trackPos: undefined,
   svg: undefined,
@@ -70,7 +68,11 @@ export class Seg extends Record(defSegData) {
   sameEnd(other: Seg, side: Side): boolean {
     const mine = this[side]
     const yours = other[side]
-    return mine.id === yours.id && mine.port === yours.port && mine.marker === yours.marker
+    return true &&
+      mine.id === yours.id &&
+      mine.port === yours.port &&
+      mine.marker === yours.marker &&
+      this.type === other.type
   }
 
   setPos(g: Graph, source: number, target: number): Seg {

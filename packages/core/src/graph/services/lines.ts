@@ -95,7 +95,11 @@ export class Lines {
               break
             }
             // if seg overlaps another, go to next track set
-            if (other.p1 < seg.p2 && seg.p1 < other.p2) {
+            const minA = Math.min(seg.p1, seg.p2)
+            const maxA = Math.max(seg.p1, seg.p2)
+            const minB = Math.min(other.p1, other.p2)
+            const maxB = Math.max(other.p1, other.p2)
+            if (minA < maxB && minB < maxA) {
               overlap = true
               break
             }
@@ -111,6 +115,27 @@ export class Lines {
         else
           trackSet.push([seg])
       }
+      // sort tracks to minimize crossings
+      // use the midpoint (average of source and target) to group edges traveling through similar regions
+      // for right-going: larger midpoint = inner track (closer to source)
+      // for left-going: smaller midpoint = inner track (closer to source)
+      const midpoint = (s: Seg) => (s.p1 + s.p2) / 2
+      const sortTracks = (tracks: Seg[][], goingRight: boolean) => {
+        tracks.sort((a, b) => {
+          const midA = Math.max(...a.map(midpoint))
+          const midB = Math.max(...b.map(midpoint))
+          return goingRight ? (midB - midA) : (midA - midB)
+        })
+      }
+      sortTracks(rightTracks, true)
+      sortTracks(leftTracks, false)
+      // for allTracks, use average midpoint (descending)
+      allTracks.sort((a, b) => {
+        const avgA = a.reduce((sum, s) => sum + midpoint(s), 0) / a.length
+        const avgB = b.reduce((sum, s) => sum + midpoint(s), 0) / b.length
+        return avgB - avgA
+      })
+
       // convert tracks to seg ids and store on layer
       const tracks = []
       const all = leftTracks.concat(rightTracks).concat(allTracks)
@@ -210,8 +235,6 @@ export class Lines {
     const dx = Math.abs(end.x - start.x)
     const dy = Math.abs(end.y - start.y)
     const d_ = { x: dx, y: dy }
-
-    // TODO: adjust start/end by markerSize first
 
     // for very straight lines, just draw a line 
     if (dx < 0.1) {

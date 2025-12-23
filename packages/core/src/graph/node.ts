@@ -6,6 +6,9 @@ import { Dir, Side, Dims, Pos, LinkType } from '../common'
 import { NodeStyle, RenderNode } from '../api/options'
 import { Graph } from './graph'
 import { Layer } from './layer'
+import { logger } from '../log'
+
+const log = logger('node')
 
 export type NodeId = string
 export type PortId = string
@@ -25,7 +28,7 @@ export type PublicNodeData = {
   title?: string
   text?: string
   type?: string
-  ports: { in: PortData[] | null, out: PortData[] | null }
+  ports: { in?: PortData[], out?: PortData[] }
   render?: RenderNode<any>
   dims?: Dims
 }
@@ -52,7 +55,7 @@ const defNodeData: NodeData = {
   text: undefined,
   type: undefined,
   render: undefined,
-  ports: { in: null, out: null },
+  ports: {},
   aligned: {},
   edges: { in: ISet(), out: ISet() },
   segs: { in: ISet(), out: ISet() },
@@ -91,11 +94,7 @@ export class Node extends Record(defNodeData) {
   }
 
   static key(node: PublicNodeData): NodeKey {
-    return `${node.id}:${node.version}`
-  }
-
-  static isDummyId(nodeId: NodeId): boolean {
-    return nodeId.startsWith(Node.dummyPrefix)
+    return `k:${node.id}:${node.version}`
   }
 
   static addNormal(g: Graph, data: PublicNodeData): Node {
@@ -107,6 +106,8 @@ export class Node extends Record(defNodeData) {
       aligned: {},
       edgeIds: [],
       layerId: layer.id,
+      lpos: undefined,
+      pos: undefined,
     })
     layer.addNode(g, node.id)
     g.nodes.set(node.id, node)
@@ -184,6 +185,22 @@ export class Node extends Record(defNodeData) {
     return g.getLayer(this.layerId)
   }
 
+  margin(g: Graph): number {
+    return this.isDummy ? g.options.edgeSpacing - g.options.dummyNodeSize : g.options.nodeMargin
+  }
+
+  marginWith(g: Graph, other: Node): number {
+    return Math.max(this.margin(g), other.margin(g))
+  }
+
+  width(g: Graph): number {
+    return this.dims?.[g.w] ?? 0
+  }
+
+  right(g: Graph): number {
+    return this.lpos! + this.width(g)
+  }
+
   setIndex(g: Graph, index: number): Node {
     if (this.index == index) return this
     return this.mut(g).set('index', index)
@@ -239,9 +256,27 @@ export class Node extends Record(defNodeData) {
   }
 
   delSelf(g: Graph): null {
+    // Clear alignment references from partner nodes
+    if (this.aligned.in)
+      g.getNode(this.aligned.in).setAligned(g, 'out', undefined)
+    if (this.aligned.out)
+      g.getNode(this.aligned.out).setAligned(g, 'in', undefined)
     this.getLayer(g).delNode(g, this.id)
-    for (const rel of this.rels(g))
-      rel.delSelf(g)
+    // Phase 1: delete edges first (which should also remove segs)
+    for (const edge of this.rels(g, 'edges', 'both'))
+      edge.delSelf(g)
+    // Phase 2: clean up any remaining segs defensively (in case of iteration ordering)
+    const remainingSegIds = [...this.segs.in, ...this.segs.out]
+    if (remainingSegIds.length > 0) {
+      for (const segId of remainingSegIds) {
+        // Only delete if seg still exists on graph
+        if ((g as any).segs?.has?.(segId)) {
+          g.getSeg(segId).delSelf(g)
+        } else {
+          // seg already removed; nothing to do
+        }
+      }
+    }
     g.nodes.delete(this.id)
     g.dirtyNodes.delete(this.id)
     g.delNodes.add(this.id)

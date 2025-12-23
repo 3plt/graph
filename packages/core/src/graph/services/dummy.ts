@@ -13,7 +13,7 @@ export class Dummy {
     // check all dirty edges to see if they need segments added or removed
     for (const edgeId of g.dirtyEdges) {
       const edge = g.getEdge(edgeId)
-      const { type, style } = edge
+      const { type } = edge
       const sourceLayer = edge.sourceNode(g).layerIndex(g)
       const targetLayer = edge.targetNode(g).layerIndex(g)
       let segIndex = 0
@@ -41,7 +41,7 @@ export class Dummy {
               })
               target = { id: dummy.id }
             }
-            seg = Seg.add(g, { source, target, type, style, edgeIds: ISet([edgeId]) })
+            seg = Seg.add(g, { source, target, type, edgeIds: ISet([edgeId]) })
             segs.splice(segIndex, 0, seg.id)
             changed = true
           } else if (
@@ -74,6 +74,7 @@ export class Dummy {
       // update edge with new segments if a change occurred
       if (changed) {
         edge.setSegIds(g, segs)
+        /* debug removed */
       }
     }
   }
@@ -97,9 +98,8 @@ export class Dummy {
       const groups: Map<string, Set<Node>> = new Map()
       // group layer dummies by edge-based keys
       for (const nodeId of layer.nodeIds) {
-        if (!Node.isDummyId(nodeId)) continue
         const node = g.getNode(nodeId)
-        if (node.isMerged) continue
+        if (!node.isDummy || node.isMerged) continue
         const edge = g.getEdge(node.edgeIds[0])
         const key = Edge.key(edge, 'k:', side)
         if (!groups.has(key)) groups.set(key, new Set())
@@ -108,7 +108,7 @@ export class Dummy {
       // for each group, we'll merge the dummies
       for (const [key, group] of groups) {
         if (group.size == 1) continue
-        const edgeIds = [...group].map(node => node.edgeId)
+        const edgeIds = [...group].map(node => node.edgeIds[0])
         const dummy = Node.addDummy(g, { edgeIds, layerId, isMerged: true })
         let seg: Seg | undefined
         // all 'in' segs are merged into a single new in seg
@@ -119,8 +119,9 @@ export class Dummy {
               const example = g.getSeg(segId)
               seg = Seg.add(g, {
                 ...example,
-                edgeIds: ISet([old.edgeId]),
-                [altSide]: { ...example[altSide], id: dummy.id },
+                edgeIds: ISet(edgeIds),
+                [side]: { ...example[side] },
+                [altSide]: { ...example[altSide], id: dummy.id, port: undefined },
               })
             }
             edge = edge.replaceSegId(g, segId, seg.id)
@@ -133,12 +134,16 @@ export class Dummy {
             const example = g.getSeg(segId)
             const seg = Seg.add(g, {
               ...example,
-              edgeIds: ISet([old.edgeId]),
-              [side]: { ...example[side], id: dummy.id },
+              edgeIds: ISet([old.edgeIds[0]]),
+              [altSide]: { ...example[altSide] },
+              [side]: { ...example[side], id: dummy.id, port: undefined },
             })
             edge = edge.replaceSegId(g, segId, seg.id)
           }
         }
+        // remove old dummies
+        for (const old of group)
+          old.delSelf(g)
       }
     }
   }

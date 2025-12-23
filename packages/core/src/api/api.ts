@@ -100,6 +100,31 @@ export class API<N, E> {
     this.canvas.editMode.editable = editable
   }
 
+  /** Replace entire history (clears prior) */
+  async replaceHistory(frames: Update<N, E>[]) {
+    this.history = frames
+    // Reset state/seq and re-init into current canvas
+    this.seq = [this.state]
+    this.index = 0
+    for (const update of this.history)
+      await this.applyUpdate(update)
+  }
+
+  /** Rebuild from snapshot (nodes/edges) */
+  async rebuildFromSnapshot(nodes: N[], edges: E[], description?: string) {
+    this.history = [
+      {
+        addNodes: nodes,
+        addEdges: edges,
+        description,
+      }
+    ]
+    this.seq = [this.state]
+    this.index = 0
+    for (const update of this.history)
+      await this.applyUpdate(update)
+  }
+
   private get graph() {
     return this.state.graph
   }

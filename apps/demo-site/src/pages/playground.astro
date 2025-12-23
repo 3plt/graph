@@ -67,6 +67,13 @@ import { examples, exampleList } from '../examples';
           <button class="nav-btn" id="nav-next" title="Next (→)">▶</button>
           <button class="nav-btn" id="nav-last" title="Last (End)">⏭</button>
         </div>
+        <div class="connect-controls" style="display:flex; gap:.5rem; align-items:center;">
+          <input id="ws-url" value="ws://localhost:8787" style="width:16rem;" />
+          <button class="nav-btn" id="ws-connect">Connect WS</button>
+          <button class="nav-btn" id="ws-disconnect">Disconnect</button>
+          <button class="nav-btn" id="fs-open">Open Folder</button>
+          <span id="ingest-status" style="font-size:.85rem; color:var(--color-text-muted)">Idle</span>
+        </div>
         <button class="nav-btn" id="help-btn" title="How to edit">❓ Help</button>
         <button class="nav-btn" id="edit-toggle" title="Toggle edit mode">✎ Edit Me!</button>
         <button class="nav-btn" id="rebuild" title="Rebuild graph from scratch">🔄 Rebuild</button>
@@ -266,11 +273,16 @@ import { examples, exampleList } from '../examples';
 
 <script>
   import { graph } from '@3plate/graph-core';
+  import { applyIngestMessage } from '@3plate/graph-core';
   import { examples, exampleList } from '../examples';
+  import { WebSocketSource } from '../utils/sources/WebSocketSource';
+  import { FileSystemSource } from '../utils/sources/FileSystemSource';
 
   let currentExample = exampleList[0];
   let currentGraph: any = null;
   let isEditable = false;
+  let wsSource: WebSocketSource<any, any> | null = null;
+  let fsSource: FileSystemSource<any, any> | null = null;
 
   function getResolvedColorMode(): 'light' | 'dark' {
     const mode = (document.getElementById('colorMode') as HTMLSelectElement).value;
@@ -411,6 +423,28 @@ import { examples, exampleList } from '../examples';
     if (helpOverlay) helpOverlay.style.display = 'none';
   }
   helpBtn?.addEventListener('click', openHelp);
+
+  // Ingest wiring
+  const statusEl = document.getElementById('ingest-status');
+  function setStatus(text: string) { if (statusEl) statusEl.textContent = text }
+  function handleIngestMessage(msg: any) {
+    if (!currentGraph) return;
+    applyIngestMessage(currentGraph, msg);
+  }
+  document.getElementById('ws-connect')?.addEventListener('click', () => {
+    const url = (document.getElementById('ws-url') as HTMLInputElement)?.value || 'ws://localhost:8787';
+    if (wsSource) wsSource.disconnect();
+    wsSource = new WebSocketSource(url, handleIngestMessage, (s) => setStatus(`WS: ${s}`));
+    wsSource.connect();
+  });
+  document.getElementById('ws-disconnect')?.addEventListener('click', () => {
+    wsSource?.disconnect();
+    setStatus('WS: closed');
+  });
+  document.getElementById('fs-open')?.addEventListener('click', async () => {
+    if (!fsSource) fsSource = new FileSystemSource(handleIngestMessage, (s) => setStatus(`FS: ${s}`));
+    await fsSource.openDirectory();
+  });
 
   // Keyboard shortcuts for navigation
   document.addEventListener('keydown', (e) => {

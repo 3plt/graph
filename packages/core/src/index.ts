@@ -8,3 +8,5 @@ export async function graph<N, E>(args: APIArguments<N, E> = { root: 'app' }) {
 }
 
 export default graph
+
+export * from './api/ingest'

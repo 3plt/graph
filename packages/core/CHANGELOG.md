@@ -1,5 +1,11 @@
 # @3plate/graph-core
 
+## 0.1.5
+
+### Patch Changes
+
+- Implement edit mode and fix many layout bugs
+
 ## 0.1.4
 
 ### Patch Changes

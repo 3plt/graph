@@ -1,5 +1,16 @@
 # @3plate/graph
 
+## 0.1.5
+
+### Patch Changes
+
+- Implement edit mode and fix many layout bugs
+- Updated dependencies
+  - @3plate/graph-core@0.1.5
+  - @3plate/graph-angular@0.1.5
+  - @3plate/graph-react@0.1.5
+  - @3plate/graph-vue@0.1.5
+
 ## 0.1.4
 
 ### Patch Changes

@@ -58,6 +58,9 @@ export class Canvas<N, E> {
   // New-edge visual element
   private newEdgeEl?: SVGElement
 
+  // Pending drag state (for double-click debounce)
+  private pendingDrag: { timeout: number, nodeId: string, startGraph: GraphPos, portId?: string } | null = null
+
   constructor(api: API<N, E>, options: CanvasData<N, E>) {
     Object.assign(this, options)
     this.api = api
@@ -184,7 +187,7 @@ export class Canvas<N, E> {
     return newNodes
   }
 
-  // ========== Mouse event handlers ========== 
+  // ========== Mouse event handlers ==========
 
   private onClick(e: MouseEvent) {
     const hit = this.hitTest(e.clientX, e.clientY)
@@ -196,6 +199,11 @@ export class Canvas<N, E> {
   }
 
   private onDoubleClick(e: MouseEvent) {
+    // Cancel any pending drag
+    if (this.pendingDrag) {
+      window.clearTimeout(this.pendingDrag.timeout)
+      this.pendingDrag = null
+    }
     if (!this.editMode.editable) return
     const hit = this.hitTest(e.clientX, e.clientY)
     if (hit.type === 'node') {
@@ -208,24 +216,28 @@ export class Canvas<N, E> {
     }
   }
 
-  // ========== Built-in Modals ========== 
+  // ========== Built-in Modals ==========
 
   /** Show the new node modal */
   showNewNodeModal(callback: (data: NewNode) => void) {
     const nodeTypes = Object.keys(this.nodeTypes)
+    const fields = this.api.getNodeFields()
     const modal = new NewNodeModal({
       nodeTypes: nodeTypes.length > 0 ? nodeTypes : undefined,
+      fields: fields.size > 0 ? fields : undefined,
       onSubmit: (data) => { callback(data) }
     })
     modal.show(document.body)
   }
 
   /** Show the edit node modal */
-  showEditNodeModal(node: EditNodeProps, callback: (data: EditNodeProps) => void) {
+  showEditNodeModal(node: Record<string, any>, callback: (data: Record<string, any>) => void) {
     const nodeTypes = Object.keys(this.nodeTypes)
+    const fields = this.api.getNodeFields()
     const modal = new EditNodeModal({
       node,
       nodeTypes: nodeTypes.length > 0 ? nodeTypes : undefined,
+      fields: fields.size > 0 ? fields : undefined,
       onSubmit: (data) => { callback(data) },
       onDelete: () => { this.api.handleDeleteNode(node.id) }
     })
@@ -374,7 +386,7 @@ export class Canvas<N, E> {
     return this.canvasToGraph(canvas)
   }
 
-  /** 
+  /**
    * Get the effective scale from canvas pixels to graph units,
    * accounting for preserveAspectRatio="xMidYMid meet" which uses
    * the smaller scale (to fit) and centers the content.
@@ -453,7 +465,8 @@ export class Canvas<N, E> {
 
     const hit = this.hitTest(e.clientX, e.clientY)
 
-    // In editable mode, start new-edge from node or port (not dummy nodes)
+    // In editable mode, schedule new-edge from node or port (not dummy nodes)
+    // Use a timeout to allow double-click to cancel the drag
     if (this.editMode.editable && (hit.type === 'node' || hit.type === 'port')) {
       const node = hit.node
       if (node.isDummy) return // Dummy nodes can't be edge endpoints
@@ -463,7 +476,18 @@ export class Canvas<N, E> {
       const startGraph = this.screenToGraph(hit.center)
       const portId = hit.type === 'port' ? hit.port : undefined
 
-      this.startNewEdge(node.data.id, startGraph, portId)
+      // Schedule drag start after a short delay (to allow double-click)
+      this.pendingDrag = {
+        timeout: window.setTimeout(() => {
+          if (this.pendingDrag) {
+            this.startNewEdge(this.pendingDrag.nodeId, this.pendingDrag.startGraph, this.pendingDrag.portId)
+            this.pendingDrag = null
+          }
+        }, 200),
+        nodeId: node.data.id,
+        startGraph,
+        portId,
+      }
       return
     }
 
@@ -514,6 +538,12 @@ export class Canvas<N, E> {
   }
 
   private onMouseUp(e: MouseEvent) {
+    // Cancel any pending drag that didn't start
+    if (this.pendingDrag) {
+      window.clearTimeout(this.pendingDrag.timeout)
+      this.pendingDrag = null
+    }
+
     // Handle new-edge mode
     if (this.editMode.isCreatingEdge) {
       this.endNewEdge(false)
@@ -613,7 +643,7 @@ export class Canvas<N, E> {
     if (!cancelled) {
       const { target, source } = state
       if (target?.type == 'node') {
-        this.api.handleAddEdge({ source, target })
+        this.api.handleAddEdge({ id: '', source, target })
       } else {
         this.api.handleNewNodeFrom(source)
       }

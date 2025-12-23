@@ -8,12 +8,12 @@ import {
 } from '../common'
 import { MarkerType } from '../canvas/marker'
 
-/** 
+/**
  * Arguments to the API constructor.
- * 
+ *
  * The caller can specify nodes and edges, or history,
  * but not both.
- * 
+ *
  * The root element ID is required.
  */
 export type APIArguments<N, E> = {
@@ -77,16 +77,8 @@ export type GraphOptions = {
 export type EventsOptions<N, E> = {
   /** Called when a node is clicked */
   nodeClick?: (node: N) => void
-  /** Called when the cursor enters a node */
-  nodeHover?: (node: N) => void
-  /** Called when the cursor leaves a node */
-  nodeLeave?: (node: N) => void
   /** Called when an edge is clicked */
   edgeClick?: (edge: E) => void
-  /** Called when the cursor enters an edge */
-  edgeHover?: (edge: E) => void
-  /** Called when the cursor leaves an edge */
-  edgeLeave?: (edge: E) => void
   /** Called when a node is double-clicked */
   editNode?: (node: N, callback: (node: N) => void) => void
   /** Called when a node should be added */
@@ -102,13 +94,15 @@ export type EventsOptions<N, E> = {
   /** Called when a node should be removed */
   removeNode?: (node: N, callback: (remove: boolean) => void) => void
   /** Called when a node should be updated */
-  updateNode?: (node: N, update: NewNode, callback: (node: N) => void) => void
+  updateNode?: (node: N, update: Record<string, any>, callback: (node: N) => void) => void
   /** Called when an edge should be updated */
-  updateEdge?: (edge: E, update: NewEdge<N>, callback: (edge: E) => void) => void
+  updateEdge?: (edge: E, update: Record<string, any>, callback: (edge: E) => void) => void
+  /** Called when history index/length changes */
+  historyChange?: (index: number, length: number) => void
 }
 
 /** Function to render a node */
-export type RenderNode<N> = (node: N) => HTMLElement
+export type RenderNode<N> = (node: N, props?: NodeProps<N>) => HTMLElement
 
 /** Color mode */
 export type ColorMode = 'light' | 'dark' | 'system'
@@ -295,8 +289,9 @@ export type NewNode = {
 /** New edge properties */
 export type NewEdge<N> = {
   /** Source node */
-  source: EdgeEnd<N>,
-  target: EdgeEnd<N>,
+  source: { node: N, port?: string, marker?: MarkerType }
+  target: { node: N, port?: string, marker?: MarkerType }
+  type?: string
 }
 
 /** Edge end properties */

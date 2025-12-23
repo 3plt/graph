@@ -5,6 +5,9 @@ import { PublicNodeData } from '../graph/node'
 import { EditEdgeProps, EditNodeProps } from '../api/api'
 import { NewNode } from '../api/options'
 
+export type FieldType = 'string' | 'number' | 'boolean'
+export type DetectedFields = Map<string, FieldType>
+
 export type ModalResult<T> = T | null
 
 export interface ModalOptions {
@@ -21,16 +24,21 @@ export class Modal {
   protected overlay: HTMLElement
   protected dialog: HTMLElement
   protected onClose: () => void
+  private mouseDownOnOverlay = false
 
   constructor(options: ModalOptions) {
     this.onClose = options.onClose
 
-    // Create overlay
+    // Create overlay - track mousedown origin to avoid closing when dragging text selection
     this.overlay = (
       <div
         className="g3p-modal-overlay"
-        onClick={(e) => {
-          if (e.target === this.overlay) this.close()
+        onMouseDown={(e) => {
+          this.mouseDownOnOverlay = e.target === this.overlay
+        }}
+        onMouseUp={(e) => {
+          if (this.mouseDownOnOverlay && e.target === this.overlay) this.close()
+          this.mouseDownOnOverlay = false
         }}
       />
     ) as HTMLElement
@@ -98,14 +106,16 @@ export class Modal {
 
 export interface NewNodeModalOptions {
   nodeTypes?: string[]
-  onSubmit: (data: NewNode) => void
+  fields?: DetectedFields
+  onSubmit: (data: Record<string, any>) => void
   onCancel?: () => void
 }
 
 export class NewNodeModal extends Modal {
-  private labelInput!: HTMLInputElement
+  private fieldInputs: Map<string, HTMLInputElement | HTMLSelectElement> = new Map()
   private typeSelect?: HTMLSelectElement
   private submitCallback: NewNodeModalOptions['onSubmit']
+  private fields: DetectedFields
 
   constructor(options: NewNodeModalOptions) {
     super({
@@ -113,6 +123,7 @@ export class NewNodeModal extends Modal {
       onClose: () => options.onCancel?.()
     })
     this.submitCallback = options.onSubmit
+    this.fields = options.fields ?? new Map([['title', 'string']])
     this.renderBody(options.nodeTypes)
     this.renderFooter()
   }
@@ -120,19 +131,12 @@ export class NewNodeModal extends Modal {
   private renderBody(nodeTypes?: string[]) {
     this.body.innerHTML = ''
 
-    // Label input
-    const labelGroup = (
-      <div className="g3p-modal-field">
-        <label className="g3p-modal-label">Label</label>
-        <input
-          type="text"
-          className="g3p-modal-input"
-          placeholder="Enter node label"
-          ref={(el: HTMLInputElement) => this.labelInput = el}
-        />
-      </div>
-    ) as HTMLElement
-    this.body.appendChild(labelGroup)
+    // Render dynamic fields
+    for (const [name, type] of this.fields) {
+      const label = name.charAt(0).toUpperCase() + name.slice(1)
+      const fieldGroup = this.renderField(name, label, type)
+      this.body.appendChild(fieldGroup)
+    }
 
     // Type selector (if types provided)
     if (nodeTypes && nodeTypes.length > 0) {
@@ -154,6 +158,34 @@ export class NewNodeModal extends Modal {
     }
   }
 
+  private renderField(name: string, label: string, type: FieldType): HTMLElement {
+    if (type === 'boolean') {
+      return (
+        <div className="g3p-modal-field g3p-modal-field-checkbox">
+          <label className="g3p-modal-label">
+            <input
+              type="checkbox"
+              className="g3p-modal-checkbox"
+              ref={(el: HTMLInputElement) => this.fieldInputs.set(name, el)}
+            />
+            {label}
+          </label>
+        </div>
+      ) as HTMLElement
+    }
+    return (
+      <div className="g3p-modal-field">
+        <label className="g3p-modal-label">{label}</label>
+        <input
+          type={type === 'number' ? 'number' : 'text'}
+          className="g3p-modal-input"
+          placeholder={`Enter ${label.toLowerCase()}`}
+          ref={(el: HTMLInputElement) => this.fieldInputs.set(name, el)}
+        />
+      </div>
+    ) as HTMLElement
+  }
+
   private renderFooter() {
     this.footer.innerHTML = ''
     this.footer.appendChild(
@@ -171,13 +203,30 @@ export class NewNodeModal extends Modal {
   }
 
   private submit() {
-    const label = this.labelInput.value.trim()
-    if (!label) {
-      this.labelInput.focus()
+    const data: Record<string, any> = {}
+
+    // Collect field values
+    for (const [name, type] of this.fields) {
+      const input = this.fieldInputs.get(name)
+      if (!input) continue
+      if (type === 'boolean') {
+        data[name] = (input as HTMLInputElement).checked
+      } else if (type === 'number') {
+        const val = (input as HTMLInputElement).value
+        if (val) data[name] = Number(val)
+      } else {
+        const val = (input as HTMLInputElement).value.trim()
+        if (val) data[name] = val
+      }
+    }
+
+    // Require at least one field to be filled
+    if (Object.keys(data).length === 0) {
+      const firstInput = this.fieldInputs.values().next().value
+      if (firstInput) firstInput.focus()
       return
     }
 
-    const data: NewNode = { text: label }
     if (this.typeSelect?.value) {
       data.type = this.typeSelect.value
     }
@@ -191,18 +240,20 @@ export class NewNodeModal extends Modal {
 // ==================== Edit Node Modal ====================
 
 export interface EditNodeModalOptions {
-  node: EditNodeProps
+  node: Record<string, any>
   position?: ScreenPos
   nodeTypes?: string[]
-  onSubmit: (data: EditNodeProps) => void
+  fields?: DetectedFields
+  onSubmit: (data: Record<string, any>) => void
   onDelete?: () => void
   onCancel?: () => void
 }
 
 export class EditNodeModal extends Modal {
-  private labelInput!: HTMLInputElement
+  private fieldInputs: Map<string, HTMLInputElement | HTMLSelectElement> = new Map()
   private typeSelect?: HTMLSelectElement
-  private node: any
+  private node: Record<string, any>
+  private fields: DetectedFields
   private submitCallback: EditNodeModalOptions['onSubmit']
   private deleteCallback?: () => void
 
@@ -215,27 +266,24 @@ export class EditNodeModal extends Modal {
     this.node = options.node
     this.submitCallback = options.onSubmit
     this.deleteCallback = options.onDelete
+    this.fields = options.fields ?? new Map([['title', 'string']])
+    if (!options.fields && !this.node.title)
+      this.node = { ...this.node, title: this.node.id }
     this.renderBody(options.nodeTypes)
     this.renderFooter()
   }
 
   private renderBody(nodeTypes?: string[]) {
+    console.log(`renderBody`, this.node)
     this.body.innerHTML = ''
 
-    // Label input
-    const currentLabel = this.node.label ?? this.node.id ?? ''
-    const labelGroup = (
-      <div className="g3p-modal-field">
-        <label className="g3p-modal-label">Label</label>
-        <input
-          type="text"
-          className="g3p-modal-input"
-          value={currentLabel}
-          ref={(el: HTMLInputElement) => this.labelInput = el}
-        />
-      </div>
-    ) as HTMLElement
-    this.body.appendChild(labelGroup)
+    // Render dynamic fields with current values
+    for (const [name, type] of this.fields) {
+      const label = name.charAt(0).toUpperCase() + name.slice(1)
+      const currentValue = this.node[name]
+      const fieldGroup = this.renderField(name, label, type, currentValue)
+      this.body.appendChild(fieldGroup)
+    }
 
     // Type selector (if types provided)
     if (nodeTypes && nodeTypes.length > 0) {
@@ -256,6 +304,35 @@ export class EditNodeModal extends Modal {
       ) as HTMLElement
       this.body.appendChild(typeGroup)
     }
+  }
+
+  private renderField(name: string, label: string, type: FieldType, currentValue?: any): HTMLElement {
+    if (type === 'boolean') {
+      return (
+        <div className="g3p-modal-field g3p-modal-field-checkbox">
+          <label className="g3p-modal-label">
+            <input
+              type="checkbox"
+              className="g3p-modal-checkbox"
+              checked={!!currentValue}
+              ref={(el: HTMLInputElement) => this.fieldInputs.set(name, el)}
+            />
+            {label}
+          </label>
+        </div>
+      ) as HTMLElement
+    }
+    return (
+      <div className="g3p-modal-field">
+        <label className="g3p-modal-label">{label}</label>
+        <input
+          type={type === 'number' ? 'number' : 'text'}
+          className="g3p-modal-input"
+          value={currentValue ?? ''}
+          ref={(el: HTMLInputElement) => this.fieldInputs.set(name, el)}
+        />
+      </div>
+    ) as HTMLElement
   }
 
   private renderFooter() {
@@ -282,13 +359,23 @@ export class EditNodeModal extends Modal {
   }
 
   private submit() {
-    const label = this.labelInput.value.trim()
-    if (!label) {
-      this.labelInput.focus()
-      return
+    const data: Record<string, any> = { ...this.node }
+
+    // Collect field values
+    for (const [name, type] of this.fields) {
+      const input = this.fieldInputs.get(name)
+      if (!input) continue
+      if (type === 'boolean') {
+        data[name] = (input as HTMLInputElement).checked
+      } else if (type === 'number') {
+        const val = (input as HTMLInputElement).value
+        data[name] = val ? Number(val) : undefined
+      } else {
+        const val = (input as HTMLInputElement).value.trim()
+        data[name] = val || undefined
+      }
     }
 
-    const data = { ...this.node, label }
     if (this.typeSelect) {
       data.type = this.typeSelect.value || undefined
     }

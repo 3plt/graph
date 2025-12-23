@@ -262,8 +262,21 @@ export class Node extends Record(defNodeData) {
     if (this.aligned.out)
       g.getNode(this.aligned.out).setAligned(g, 'in', undefined)
     this.getLayer(g).delNode(g, this.id)
-    for (const rel of this.rels(g))
-      rel.delSelf(g)
+    // Phase 1: delete edges first (which should also remove segs)
+    for (const edge of this.rels(g, 'edges', 'both'))
+      edge.delSelf(g)
+    // Phase 2: clean up any remaining segs defensively (in case of iteration ordering)
+    const remainingSegIds = [...this.segs.in, ...this.segs.out]
+    if (remainingSegIds.length > 0) {
+      for (const segId of remainingSegIds) {
+        // Only delete if seg still exists on graph
+        if ((g as any).segs?.has?.(segId)) {
+          g.getSeg(segId).delSelf(g)
+        } else {
+          // seg already removed; nothing to do
+        }
+      }
+    }
     g.nodes.delete(this.id)
     g.dirtyNodes.delete(this.id)
     g.delNodes.add(this.id)

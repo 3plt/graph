@@ -7,12 +7,12 @@ export class Node {
   hovered: boolean
   container!: SVGElement
   content!: HTMLElement
-  canvas: Canvas
+  canvas: Canvas<any, any>
   data: PublicNodeData
   isDummy: boolean
   pos?: Pos
 
-  constructor(canvas: Canvas, data: PublicNodeData, isDummy: boolean = false) {
+  constructor(canvas: Canvas<any, any>, data: PublicNodeData, isDummy: boolean = false) {
     this.canvas = canvas
     this.data = data
     this.selected = false
@@ -23,7 +23,7 @@ export class Node {
       const size = canvas.dummyNodeSize
     } else {
       const render = data!.render ?? canvas.renderNode
-      this.content = this.renderContent(render(data!.data))
+      this.content = this.renderContent(render(data!.data, data!))
     }
   }
 

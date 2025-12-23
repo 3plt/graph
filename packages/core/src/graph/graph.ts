@@ -105,6 +105,7 @@ export class Graph {
       this.applyChanges()
       Cycles.checkCycles(this)
       Layers.updateLayers(this)
+      /* debug removed */
       Dummy.updateDummies(this)
       Dummy.mergeDummies(this)
       Layout.positionNodes(this)

@@ -6,7 +6,7 @@ import { examples, exampleList } from '../examples';
 
 <Layout title="Playground - @3plate/graph">
   <Header />
-  
+
   <main class="playground">
     <div class="sidebar">
       <h2>Examples</h2>
@@ -54,12 +54,6 @@ import { examples, exampleList } from '../examples';
           </select>
         </div>
 
-        <div class="option-group">
-          <label>
-            <input type="checkbox" id="editable" />
-            Editable Mode
-          </label>
-        </div>
       </div>
 
     </div>
@@ -69,9 +63,12 @@ import { examples, exampleList } from '../examples';
         <div class="nav-controls">
           <button class="nav-btn" id="nav-first" title="First (Home)">⏮</button>
           <button class="nav-btn" id="nav-prev" title="Previous (←)">◀</button>
+          <span id="history-label" style="min-width: 4rem; text-align: center;">— / —</span>
           <button class="nav-btn" id="nav-next" title="Next (→)">▶</button>
           <button class="nav-btn" id="nav-last" title="Last (End)">⏭</button>
         </div>
+        <button class="nav-btn" id="help-btn" title="How to edit">❓ Help</button>
+        <button class="nav-btn" id="edit-toggle" title="Toggle edit mode">✎ Edit Me!</button>
         <button class="nav-btn" id="rebuild" title="Rebuild graph from scratch">🔄 Rebuild</button>
       </div>
       <div class="graph-container" id="playground-graph"></div>
@@ -203,12 +200,67 @@ import { examples, exampleList } from '../examples';
     cursor: not-allowed;
   }
 
+  /* Prominent edit toggle */
+  #edit-toggle {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: #fff;
+    font-weight: 600;
+  }
+
   .graph-container {
     flex: 1;
     background: var(--color-bg);
     border-radius: 0.75rem;
     box-shadow: var(--shadow-md);
     overflow: hidden;
+  }
+</style>
+<style is:global>
+  /* Help modal (global so it applies to elements appended to document.body) */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.35);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+  .modal {
+    width: min(680px, calc(100vw - 2rem));
+    background: var(--color-bg);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+    border-radius: 0.75rem;
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+  }
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-bg-secondary);
+  }
+  .modal-header h3 {
+    font-size: 1rem;
+    font-weight: 600;
+  }
+  .modal-close {
+    background: transparent;
+    border: none;
+    color: var(--color-text);
+    font-size: 1.25rem;
+    cursor: pointer;
+  }
+  .modal-body {
+    padding: 1rem;
+    line-height: 1.6;
+  }
+  .modal-body ul {
+    margin: 0.5rem 0 0 1.25rem;
   }
 </style>
 
@@ -218,6 +270,7 @@ import { examples, exampleList } from '../examples';
 
   let currentExample = exampleList[0];
   let currentGraph: any = null;
+  let isEditable = false;
 
   function getResolvedColorMode(): 'light' | 'dark' {
     const mode = (document.getElementById('colorMode') as HTMLSelectElement).value;
@@ -229,7 +282,6 @@ import { examples, exampleList } from '../examples';
 
   function getOptions(exampleOptions?: any) {
     const orientation = (document.getElementById('orientation') as HTMLSelectElement).value;
-    const editable = (document.getElementById('editable') as HTMLInputElement).checked;
 
     return {
       graph: { orientation },
@@ -237,7 +289,7 @@ import { examples, exampleList } from '../examples';
         width: '100%',
         height: '100%',
         colorMode: getResolvedColorMode(),
-        editable,
+        editable: isEditable,
         ...exampleOptions?.canvas,
       }
     };
@@ -258,10 +310,26 @@ import { examples, exampleList } from '../examples';
         nodes: example.nodes as any,
         edges: example.edges as any,
         options,
-      });
+        events: {
+          historyChange: () => updateHistoryLabel(),
+        }
+      } as any);
+      updateHistoryLabel();
     } catch (e) {
       console.error('Failed to render graph:', e);
       container.innerHTML = '<p style="padding: 2rem; color: #ef4444;">Failed to load graph</p>';
+    }
+  }
+
+  function updateHistoryLabel() {
+    const label = document.getElementById('history-label');
+    if (!label || !currentGraph) return;
+    try {
+      const idx = currentGraph.getHistoryIndex?.() ?? 0;
+      const len = currentGraph.getHistoryLength?.() ?? 1;
+      label.textContent = `${idx + 1} / ${len}`;
+    } catch {
+      label.textContent = '— / —';
     }
   }
 
@@ -281,35 +349,92 @@ import { examples, exampleList } from '../examples';
   });
 
   // Navigation controls
-  document.getElementById('nav-first')?.addEventListener('click', () => currentGraph?.nav('first'));
-  document.getElementById('nav-prev')?.addEventListener('click', () => currentGraph?.nav('prev'));
-  document.getElementById('nav-next')?.addEventListener('click', () => currentGraph?.nav('next'));
-  document.getElementById('nav-last')?.addEventListener('click', () => currentGraph?.nav('last'));
+  document.getElementById('nav-first')?.addEventListener('click', () => { currentGraph?.nav('first'); updateHistoryLabel(); });
+  document.getElementById('nav-prev')?.addEventListener('click', () => { currentGraph?.nav('prev'); updateHistoryLabel(); });
+  document.getElementById('nav-next')?.addEventListener('click', () => { currentGraph?.nav('next'); updateHistoryLabel(); });
+  document.getElementById('nav-last')?.addEventListener('click', () => { currentGraph?.nav('last'); updateHistoryLabel(); });
 
   // Rebuild button
   document.getElementById('rebuild')?.addEventListener('click', () => currentGraph?.rebuild());
+
+  // Edit toggle
+  document.getElementById('edit-toggle')?.addEventListener('click', () => {
+    isEditable = !isEditable;
+    const btn = document.getElementById('edit-toggle');
+    if (btn) btn.textContent = isEditable ? '✓ Done Editing' : '✎ Edit Me!';
+    const rebuildBtn = document.getElementById('rebuild') as HTMLButtonElement | null;
+    if (rebuildBtn) rebuildBtn.disabled = !isEditable;
+    try {
+      currentGraph?.setEditable?.(isEditable);
+    } catch {}
+  });
+
+  // Help modal logic
+  const helpBtn = document.getElementById('help-btn');
+  let helpOverlay: HTMLElement | null = null;
+  function openHelp() {
+    if (!helpOverlay) {
+      helpOverlay = document.createElement('div');
+      helpOverlay.className = 'modal-overlay';
+      helpOverlay.innerHTML = `
+        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="help-title">
+          <div class="modal-header">
+            <h3 id="help-title">Editing the Graph</h3>
+            <button class="modal-close" title="Close" aria-label="Close">×</button>
+          </div>
+          <div class="modal-body">
+            <p>Here’s how to edit the graph:</p>
+            <ul>
+              <li><strong>Enable editing</strong>: Click “Edit Me!”</li>
+              <li><strong>Add a node</strong>: Double‑click an empty area</li>
+              <li><strong>Edit a node</strong>: Double‑click a node</li>
+              <li><strong>Edit an edge</strong>: Double‑click an edge</li>
+              <li><strong>Create an edge</strong>: Click and drag from a node (or its port) onto another node; press Esc to cancel</li>
+              <li><strong>Pan</strong>: Drag on canvas or edges; <strong>Zoom</strong>: Mouse wheel or controls</li>
+              <li><strong>Rebuild</strong>: Use “Rebuild” to re-layout from scratch (enabled in edit mode)</li>
+            </ul>
+            <p>When you’re done, click “Done Editing” to lock the canvas.</p>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(helpOverlay);
+      helpOverlay.addEventListener('click', (e) => {
+        const target = e.target as HTMLElement;
+        if (target.classList.contains('modal-overlay') || target.classList.contains('modal-close')) {
+          closeHelp();
+        }
+      });
+    }
+    helpOverlay.style.display = 'flex';
+  }
+  function closeHelp() {
+    if (helpOverlay) helpOverlay.style.display = 'none';
+  }
+  helpBtn?.addEventListener('click', openHelp);
 
   // Keyboard shortcuts for navigation
   document.addEventListener('keydown', (e) => {
     if (!currentGraph) return;
     if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) return;
-    
+
     switch (e.key) {
       case 'Home':
-        currentGraph.nav('first');
+        currentGraph.nav('first'); updateHistoryLabel();
         break;
       case 'End':
-        currentGraph.nav('last');
+        currentGraph.nav('last'); updateHistoryLabel();
         break;
       case 'ArrowLeft':
-        currentGraph.nav('prev');
+        currentGraph.nav('prev'); updateHistoryLabel();
         break;
       case 'ArrowRight':
-        currentGraph.nav('next');
+        currentGraph.nav('next'); updateHistoryLabel();
         break;
     }
   });
 
   // Initial render
   renderGraph();
+  // Ensure rebuild state matches initial edit mode
+  (document.getElementById('rebuild') as HTMLButtonElement | null)?.setAttribute('disabled', (!isEditable).toString());
 </script>

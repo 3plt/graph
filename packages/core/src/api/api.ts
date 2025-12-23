@@ -41,6 +41,9 @@ export class API<N, E> {
   private nodeIds: Map<N, string>
   private edgeIds: Map<E, string>
   private nodeVersions: Map<N, number>
+  private nodeOverrides: Map<N, Partial<NodeProps<N>>>
+  private edgeOverrides: Map<E, Partial<EdgeProps<N>>>
+  private nodeFields: Map<string, 'string' | 'number' | 'boolean'>
   private nextNodeId: number
   private nextEdgeId: number
   private events: EventsOptions<N, E>
@@ -59,6 +62,9 @@ export class API<N, E> {
     this.nodeIds = new Map()
     this.edgeIds = new Map()
     this.nodeVersions = new Map()
+    this.nodeOverrides = new Map()
+    this.edgeOverrides = new Map()
+    this.nodeFields = new Map()
     this.nextNodeId = 1
     this.nextEdgeId = 1
 
@@ -77,6 +83,21 @@ export class API<N, E> {
     } else {
       this.history = []
     }
+  }
+
+  /** Current history index (0-based) */
+  getHistoryIndex(): number {
+    return this.index
+  }
+
+  /** Current history length */
+  getHistoryLength(): number {
+    return this.seq.length
+  }
+
+  /** Toggle canvas editable mode without re-creating the graph */
+  setEditable(editable: boolean): void {
+    this.canvas.editMode.editable = editable
   }
 
   private get graph() {
@@ -116,6 +137,9 @@ export class API<N, E> {
     this.applyDiff(this.index, newIndex)
     this.index = newIndex
     this.state = this.seq[this.index]
+    // Notify history change
+    if (this.events.historyChange)
+      this.events.historyChange(this.index, this.seq.length)
   }
 
   private applyDiff(oldIndex: number, newIndex: number) {
@@ -201,8 +225,7 @@ export class API<N, E> {
     const edges: E[] = [...this.edgeIds.keys()]
 
     await this.update(updater => {
-      updater.describe('Rebuild')
-      // Remove all edges first, then nodes
+      // Remove all edges and nodes
       for (const edge of edges) updater.deleteEdge(edge)
       for (const node of nodes) updater.deleteNode(node)
       // Re-add all nodes first, then edges
@@ -229,6 +252,8 @@ export class API<N, E> {
         this._addEdge(edge, mut)
       for (const edge of update.updateEdges ?? [])
         this._updateEdge(edge, mut)
+      this.nodeOverrides.clear()
+      this.edgeOverrides.clear()
     })
     // add the new state, then nav to it
     this.state = { graph, update }
@@ -236,6 +261,9 @@ export class API<N, E> {
     this.seq.splice(this.index + 1)
     this.seq.push(this.state)
     this.nav('last')
+    // In case the consumer doesn't call nav, still notify
+    if (this.events.historyChange)
+      this.events.historyChange(this.index, this.seq.length)
   }
 
   private setNodePositions() {
@@ -262,7 +290,12 @@ export class API<N, E> {
     else if (!data) throw new Error(`invalid node ${data}`)
     else if (typeof data == 'string') props = { id: data }
     else if (typeof data == 'object') props = data
-    else throw new Error(`invalid node ${data}`)
+    else throw new Error(`invalid node ${JSON.stringify(data)}`)
+    // Detect fields from the raw node data
+    this.detectNodeFields(data)
+    // Apply overrides (from built-in modal edits on opaque types)
+    const overrides = this.nodeOverrides.get(data)
+    if (overrides) props = { ...props, ...overrides }
     let { id, title, text, type, render } = props
     id ??= this.getNodeId(data)
     const ports = this.parsePorts(props.ports)
@@ -273,6 +306,24 @@ export class API<N, E> {
     return { id, data, ports, title, text, type, render, version }
   }
 
+  private detectNodeFields(data: N) {
+    if (typeof data != 'object' || !data) return
+    // Skip internal/complex fields
+    const skip = new Set(['id', 'ports', 'render', 'version'])
+    for (const [key, value] of Object.entries(data)) {
+      if (skip.has(key)) continue
+      if (value === null || value === undefined) continue
+      const type = typeof value
+      if (type === 'string' || type === 'number' || type === 'boolean') {
+        this.nodeFields.set(key, type)
+      }
+    }
+  }
+
+  getNodeFields(): Map<string, 'string' | 'number' | 'boolean'> {
+    return this.nodeFields
+  }
+
   private parseEdge(data: E): PublicEdgeData {
     const get = this.options.props.edge
     let props: Partial<EdgeProps<N>>
@@ -281,8 +332,11 @@ export class API<N, E> {
     else if (typeof data == 'string') props = this.parseStringEdge(data)
     else if (typeof data == 'object') props = data
     else throw new Error(`invalid edge ${data}`)
+    // Apply overrides (from built-in modal edits on opaque types)
+    const overrides = this.edgeOverrides.get(data)
+    if (overrides) props = { ...props, ...overrides }
     let { id, source, target, type } = props
-    id ??= this.getEdgeId(data)
+    if (!id) id = this.getEdgeId(data)
     source = this.parseEdgeEnd(source)
     target = this.parseEdgeEnd(target)
     const edge = { id, source, target, type, data }
@@ -297,14 +351,15 @@ export class API<N, E> {
       const keys = Object.keys(end)
       const pidx = keys.indexOf('port')
       if (pidx != -1) {
-        if (typeof end.port != 'string') return end
+        // port must be string or undefined; if it's something else, return as-is
+        if (end.port !== undefined && typeof end.port != 'string') return end
         keys.splice(pidx, 1)
       }
       if (keys.length != 1) return end
       if (keys[0] == 'id') return end
       if (keys[0] != 'node') return end
       const id = this.nodeIds.get(end.node)
-      if (!id) throw new Error(`edge end ${end} references unknown node ${end.node}`)
+      if (!id) throw new Error(`edge end references unknown node ${end.node}`)
       return { id, port: end.port }
     }
     throw new Error(`invalid edge end ${end}`)
@@ -362,15 +417,15 @@ export class API<N, E> {
 
   private _removeNode(node: any, mut: Mutator) {
     const id = this.nodeIds.get(node)
-    if (!id) throw new Error(`removing node ${node} which does not exist`)
+    if (!id) throw new Error(`removing node ${JSON.stringify(node)} which does not exist`)
     mut.removeNode({ id })
   }
 
   private _updateNode(node: Node, mut: Mutator) {
     const { data, id: newId } = node.data!
     const oldId = this.nodeIds.get(data)
-    if (!oldId) throw new Error(`updating unknown node ${node}`)
-    if (oldId != newId) throw new Error(`node id changed from ${oldId} to ${newId}`)
+    if (!oldId) throw new Error(`updating unknown node ${JSON.stringify(node)} `)
+    if (oldId != newId) throw new Error(`node id changed from ${oldId} to ${newId} `)
     mut.updateNode(node.data!)
   }
 
@@ -378,26 +433,26 @@ export class API<N, E> {
     const data = this.parseEdge(edge)
     const id = this.edgeIds.get(edge)
     if (id && id != data.id)
-      throw new Error(`edge id changed from ${id} to ${data.id}`)
+      throw new Error(`edge id changed from ${id} to ${data.id} `)
     this.edgeIds.set(edge, data.id)
     mut.addEdge(data)
   }
 
   private _removeEdge(edge: any, mut: Mutator) {
     const id = this.edgeIds.get(edge)
-    if (!id) throw new Error(`removing edge ${edge} which does not exist`)
+    if (!id) throw new Error(`removing edge ${JSON.stringify(edge)} which does not exist`)
     mut.removeEdge(this.parseEdge(edge))
   }
 
   private _updateEdge(edge: any, mut: Mutator) {
     const id = this.edgeIds.get(edge)
-    if (!id) throw new Error(`updating unknown edge ${edge}`)
+    if (!id) throw new Error(`updating unknown edge ${JSON.stringify(edge)} `)
     const data = this.parseEdge(edge)
-    if (data.id !== id) throw new Error(`edge id changed from ${id} to ${data.id}`)
+    if (data.id !== id) throw new Error(`edge id changed from ${id} to ${data.id} `)
     mut.updateEdge(data)
   }
 
-  // Evemt Handlers
+  // Event Handlers
 
   handleClickNode(id: NodeId) {
     const handler = this.events.nodeClick
@@ -436,7 +491,11 @@ export class API<N, E> {
           u.addNode(node).addEdge(edge)
         })
       }
-      const newEdge = { source, target: node }
+      const data = this.graph.getNode(source.id).data
+      const newEdge: NewEdge<N> = {
+        source: { node: data, port: source.port },
+        target: { node }
+      }
       if (this.events.addEdge)
         this.events.addEdge(newEdge, gotEdge)
       else
@@ -445,7 +504,7 @@ export class API<N, E> {
     if (this.events.newNode)
       this.events.newNode(gotNode)
     else
-      this.canvas.showNewNodeModal(async (data: NewNode) => {
+      this.canvas.showNewNodeModal(async (data: Record<string, any>) => {
         if (this.events.addNode)
           this.events.addNode(data, gotNode)
         else
@@ -460,13 +519,17 @@ export class API<N, E> {
     }
     if (this.events.editNode)
       this.events.editNode(node.data, gotNode)
-    else
-      this.canvas.showEditNodeModal(node, async (data: EditNodeProps) => {
+    else {
+      this.canvas.showEditNodeModal(node, async (data: Record<string, any>) => {
         if (this.events.updateNode)
           this.events.updateNode(node.data, data, gotNode)
-        else
-          await gotNode(data as N)
+        else {
+          // Store overrides for opaque N types, then update with original data
+          this.nodeOverrides.set(node.data, data)
+          await gotNode(node.data)
+        }
       })
+    }
   }
 
   async handleEditEdge(id: SegId) {
@@ -480,17 +543,36 @@ export class API<N, E> {
       this.events.editEdge(edge.data, gotEdge)
     else
       this.canvas.showEditEdgeModal(edge, async (data: EditEdgeProps) => {
+        const sourceNode = edge.sourceNode(this.graph)
+        const targetNode = edge.targetNode(this.graph)
+        const update: NewEdge<N> = {
+          source: { node: sourceNode.data, port: data.source.port, marker: data.source.marker },
+          target: { node: targetNode.data, port: data.target.port, marker: data.target.marker },
+        }
         if (this.events.updateEdge)
-          this.events.updateEdge(edge.data, data, gotEdge)
+          this.events.updateEdge(edge.data, update, gotEdge)
+        else {
+          // Store overrides for opaque E types, then update with original data
+          this.edgeOverrides.set(edge.data, {
+            source: { id: sourceNode.id, port: data.source.port, marker: data.source.marker },
+            target: { id: targetNode.id, port: data.target.port, marker: data.target.marker },
+            type: data.type,
+          })
+          await gotEdge(edge.data)
+        }
       })
   }
 
-  async handleAddEdge(data: NewEdge<N>) {
+  async handleAddEdge(data: EditEdgeProps) {
     const gotEdge = async (edge: E | null) => {
       if (edge) await this.addEdge(edge)
     }
+    const newEdge: NewEdge<N> = {
+      source: { node: this.graph.getNode(data.source.id).data, port: data.source.port, marker: data.source.marker },
+      target: { node: this.graph.getNode(data.target.id).data, port: data.target.port, marker: data.target.marker },
+    }
     if (this.events.addEdge)
-      this.events.addEdge(data, gotEdge)
+      this.events.addEdge(newEdge, gotEdge)
     else
       await gotEdge(data as E)
   }

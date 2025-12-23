@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "astro dev",
+    "dev": "VITE_LOG_INGEST_URL=http://localhost:7242/ingest/46f5e467-408b-4050-aba5-2628947aa36e VITE_LOG_LEVEL=debug astro dev",
     "build": "astro build",
     "preview": "astro preview"
   },

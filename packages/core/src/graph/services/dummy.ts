@@ -74,6 +74,7 @@ export class Dummy {
       // update edge with new segments if a change occurred
       if (changed) {
         edge.setSegIds(g, segs)
+        /* debug removed */
       }
     }
   }

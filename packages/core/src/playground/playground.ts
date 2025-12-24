@@ -3,6 +3,7 @@ import { applyIngestMessage } from '../api/ingest'
 import type { API } from '../api/api'
 import { WebSocketSource } from './sources/WebSocketSource'
 import { FileSystemSource } from './sources/FileSystemSource'
+import { FileSource } from './sources/FileSource'
 import type { PlaygroundOptions, Example } from './types'
 import styles from './styles.css?raw'
 
@@ -14,9 +15,11 @@ export class Playground {
   private isEditable = false
   private wsSource: WebSocketSource<any, any> | null = null
   private fsSource: FileSystemSource<any, any> | null = null
+  private fileSource: FileSource<any, any> | null = null
   private wsStatus: 'disconnected' | 'connecting' | 'connected' | 'error' = 'disconnected'
   private fsStatus: 'disconnected' | 'opening' | 'connected' | 'error' = 'disconnected'
-  private activeSourceType: 'ws' | 'folder' | null = null
+  private fileStatus: 'disconnected' | 'connecting' | 'connected' | 'error' = 'disconnected'
+  private activeSourceType: 'ws' | 'folder' | 'file' | null = null
   private wsUrl = 'ws://localhost:8787'
   private sourceModal: HTMLElement | null = null
   private helpOverlay: HTMLElement | null = null
@@ -45,6 +48,7 @@ export class Playground {
     this.setupEventListeners()
     await this.renderGraph()
     this.updateSourceIcon()
+    this.connectExampleSource()
 
     // Set initial rebuild button state
     const rebuildBtn = this.rootElement.querySelector('#rebuild') as HTMLButtonElement | null
@@ -147,6 +151,7 @@ export class Playground {
         btn.classList.add('active')
         this.currentExample = btn.getAttribute('data-example') || this.exampleList[0]
         this.renderGraph()
+        this.connectExampleSource()
       })
     })
 
@@ -290,6 +295,41 @@ export class Playground {
     }
   }
 
+  private connectExampleSource() {
+    const example = this.options.examples[this.currentExample]
+    if (!example.source) {
+      // No source specified, disconnect any active sources
+      this.disconnectAllSources()
+      return
+    }
+
+    // Disconnect existing sources first
+    this.disconnectAllSources()
+
+    if (example.source.type === 'websocket') {
+      this.wsUrl = example.source.url
+      this.wsSource = new WebSocketSource(example.source.url, this.handleIngestMessage.bind(this), this.updateWsStatus)
+      this.wsSource.connect()
+    } else if (example.source.type === 'file') {
+      this.fileSource = new FileSource(example.source.path, this.handleIngestMessage.bind(this), this.updateFileStatus)
+      this.fileSource.connect()
+    }
+  }
+
+  private disconnectAllSources() {
+    this.wsSource?.disconnect()
+    this.fsSource?.close()
+    this.fileSource?.close()
+    this.wsSource = null
+    this.fsSource = null
+    this.fileSource = null
+    this.activeSourceType = null
+    this.wsStatus = 'disconnected'
+    this.fsStatus = 'disconnected'
+    this.fileStatus = 'disconnected'
+    this.updateSourceIcon()
+  }
+
   private openHelp() {
     if (!this.helpOverlay) {
       this.helpOverlay = document.createElement('div')
@@ -341,21 +381,31 @@ export class Playground {
     iconBtn.classList.remove('active', 'connecting', 'error')
 
     const isConnected = (this.activeSourceType === 'ws' && this.wsStatus === 'connected') ||
-                        (this.activeSourceType === 'folder' && this.fsStatus === 'connected')
+                        (this.activeSourceType === 'folder' && this.fsStatus === 'connected') ||
+                        (this.activeSourceType === 'file' && this.fileStatus === 'connected')
     const isConnecting = (this.activeSourceType === 'ws' && this.wsStatus === 'connecting') ||
-                         (this.activeSourceType === 'folder' && this.fsStatus === 'opening')
+                         (this.activeSourceType === 'folder' && this.fsStatus === 'opening') ||
+                         (this.activeSourceType === 'file' && this.fileStatus === 'connecting')
     const hasError = (this.activeSourceType === 'ws' && this.wsStatus === 'error') ||
-                     (this.activeSourceType === 'folder' && this.fsStatus === 'error')
+                     (this.activeSourceType === 'folder' && this.fsStatus === 'error') ||
+                     (this.activeSourceType === 'file' && this.fileStatus === 'error')
+
+    let icon = '📡'
+    if (this.activeSourceType === 'folder') {
+      icon = '📁'
+    } else if (this.activeSourceType === 'file') {
+      icon = '📄'
+    }
 
     if (isConnected) {
       iconBtn.classList.add('active')
-      iconBtn.textContent = this.activeSourceType === 'folder' ? '📁' : '📡'
+      iconBtn.textContent = icon
     } else if (isConnecting) {
       iconBtn.classList.add('connecting')
-      iconBtn.textContent = this.activeSourceType === 'folder' ? '📁' : '📡'
+      iconBtn.textContent = icon
     } else if (hasError) {
       iconBtn.classList.add('error')
-      iconBtn.textContent = this.activeSourceType === 'folder' ? '📁' : '📡'
+      iconBtn.textContent = icon
     } else {
       iconBtn.textContent = '📡'
     }
@@ -370,6 +420,9 @@ export class Playground {
       this.activeSourceType = 'ws'
       if (this.fsSource && this.fsStatus === 'connected') {
         this.fsSource.close()
+      }
+      if (this.fileSource && this.fileStatus === 'connected') {
+        this.fileSource.close()
       }
     } else if (status === 'error') {
       this.wsStatus = 'error'
@@ -402,6 +455,33 @@ export class Playground {
       }
     } else {
       this.fsStatus = 'disconnected'
+    }
+    this.updateSourceIcon()
+    this.updateSourceModal()
+  }
+
+  private updateFileStatus = (status: 'idle' | 'opened' | 'reading' | 'error' | 'closed', detail?: any) => {
+    if (status === 'opened') {
+      this.fileStatus = 'connecting'
+      this.activeSourceType = 'file'
+      if (this.wsSource && this.wsStatus === 'connected') {
+        this.wsSource.disconnect()
+      }
+      if (this.fsSource && this.fsStatus === 'connected') {
+        this.fsSource.close()
+      }
+    } else if (status === 'reading') {
+      this.fileStatus = 'connected'
+      this.activeSourceType = 'file'
+    } else if (status === 'error') {
+      this.fileStatus = 'error'
+    } else if (status === 'closed') {
+      this.fileStatus = 'disconnected'
+      if (this.activeSourceType === 'file') {
+        this.activeSourceType = null
+      }
+    } else {
+      this.fileStatus = 'disconnected'
     }
     this.updateSourceIcon()
     this.updateSourceModal()
@@ -591,6 +671,35 @@ export class Playground {
         statusDiv.innerHTML = `
           <div class="status-message error">
             ✗ Error opening folder. Please try again.
+          </div>
+        `
+      } else {
+        statusDiv.innerHTML = `
+          <div class="status-message info">
+            Not connected
+          </div>
+        `
+      }
+    } else if (this.activeSourceType === 'file') {
+      const example = this.options.examples[this.currentExample]
+      const filePath = example.source?.type === 'file' ? example.source.path : ''
+      if (this.fileStatus === 'connecting') {
+        statusDiv.innerHTML = `
+          <div class="status-message info">
+            <span class="loading-spinner"></span>
+            Connecting to ${filePath}...
+          </div>
+        `
+      } else if (this.fileStatus === 'connected') {
+        statusDiv.innerHTML = `
+          <div class="status-message success">
+            ✓ Connected to ${filePath}
+          </div>
+        `
+      } else if (this.fileStatus === 'error') {
+        statusDiv.innerHTML = `
+          <div class="status-message error">
+            ✗ Error loading file. Please check the path and try again.
           </div>
         `
       } else {

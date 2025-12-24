@@ -29,12 +29,17 @@ export type ExampleOptions = {
   }
 }
 
+export type ExampleSource =
+  | { type: 'file', path: string }
+  | { type: 'websocket', url: string }
+
 export type Example = {
   name: string
   description?: string
   nodes: ExampleNode[]
   edges: ExampleEdge[]
   options?: ExampleOptions
+  source?: ExampleSource
 }
 
 export type PlaygroundOptions = {

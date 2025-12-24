@@ -32,41 +32,30 @@ export type EditEdgeProps = {
 
 /** Core graph API */
 export class API<N, E> {
-  private state: State<N, E>
-  private seq: State<N, E>[]
-  private index: number
+  private state!: State<N, E>
+  private seq!: State<N, E>[]
+  private index!: number
   private canvas: Canvas<N, E>
   private options: Defaults<N, E>
   private history: Update<N, E>[]
-  private nodeIds: Map<N, string>
-  private edgeIds: Map<E, string>
-  private nodeVersions: Map<N, number>
-  private nodeOverrides: Map<N, Partial<NodeProps<N>>>
-  private edgeOverrides: Map<E, Partial<EdgeProps<N>>>
-  private nodeFields: Map<string, 'string' | 'number' | 'boolean'>
-  private nextNodeId: number
-  private nextEdgeId: number
+  private nodeIds!: Map<N, string>
+  private edgeIds!: Map<E, string>
+  private nodeVersions!: Map<N, number>
+  private nodeOverrides!: Map<N, Partial<NodeProps<N>>>
+  private edgeOverrides!: Map<E, Partial<EdgeProps<N>>>
+  private nodeFields!: Map<string, 'string' | 'number' | 'boolean'>
+  private nextNodeId!: number
+  private nextEdgeId!: number
   private events: EventsOptions<N, E>
   private root: string
 
   constructor(args: APIArguments<N, E>) {
     this.root = args.root
     this.options = applyDefaults(args.options)
-
-    // build initial empty graph
-    let graph = new Graph({ options: this.options.graph })
-    this.state = { graph, update: null }
     this.events = args.events || {}
-    this.seq = [this.state]
-    this.index = 0
-    this.nodeIds = new Map()
-    this.edgeIds = new Map()
-    this.nodeVersions = new Map()
-    this.nodeOverrides = new Map()
-    this.edgeOverrides = new Map()
-    this.nodeFields = new Map()
-    this.nextNodeId = 1
-    this.nextEdgeId = 1
+
+    // reset graph state
+    this.reset()
 
     // create canvas
     this.canvas = new Canvas<N, E>(this, {
@@ -83,6 +72,34 @@ export class API<N, E> {
     } else {
       this.history = []
     }
+  }
+
+  reset() {
+    let graph = new Graph({ options: this.options.graph })
+    this.state = { graph, update: null }
+    this.seq = [this.state]
+    this.index = 0
+    this.nodeIds = new Map()
+    this.edgeIds = new Map()
+    this.nodeVersions = new Map()
+    this.nodeOverrides = new Map()
+    this.edgeOverrides = new Map()
+    this.nodeFields = new Map()
+    this.nextNodeId = 1
+    this.nextEdgeId = 1
+  }
+
+  /** Initialize the API */
+  async init() {
+    const root = document.getElementById(this.root)
+    if (!root) throw new Error('root element not found')
+    root.appendChild(this.canvas.container!)
+    await this.applyHistory()
+  }
+
+  private async applyHistory() {
+    for (const update of this.history)
+      await this.applyUpdate(update)
   }
 
   /** Current history index (0-based) */
@@ -102,40 +119,24 @@ export class API<N, E> {
 
   /** Replace entire history (clears prior) */
   async replaceHistory(frames: Update<N, E>[]) {
+    this.reset()
     this.history = frames
-    // Reset state/seq and re-init into current canvas
-    this.seq = [this.state]
-    this.index = 0
-    for (const update of this.history)
-      await this.applyUpdate(update)
+    await this.applyHistory()
   }
 
   /** Rebuild from snapshot (nodes/edges) */
-  async rebuildFromSnapshot(nodes: N[], edges: E[], description?: string) {
-    this.history = [
-      {
-        addNodes: nodes,
-        addEdges: edges,
-        description,
-      }
-    ]
-    this.seq = [this.state]
-    this.index = 0
-    for (const update of this.history)
-      await this.applyUpdate(update)
+  async replaceSnapshot(nodes: N[], edges: E[], description?: string) {
+    this.reset()
+    this.history = [{
+      addNodes: nodes,
+      addEdges: edges,
+      description,
+    }]
+    await this.applyHistory()
   }
 
   private get graph() {
     return this.state.graph
-  }
-
-  /** Initialize the API */
-  async init() {
-    const root = document.getElementById(this.root)
-    if (!root) throw new Error('root element not found')
-    root.appendChild(this.canvas.container!)
-    for (const update of this.history)
-      await this.applyUpdate(update)
   }
 
   /** Navigate to a different state */

@@ -35,18 +35,18 @@ export async function applyIngestMessage<N, E>(
 ): Promise<void> {
   switch (msg.type) {
     case 'snapshot': {
-      await api.rebuildFromSnapshot(msg.nodes, msg.edges, msg.description)
+      await api.replaceSnapshot(msg.nodes, msg.edges, msg.description)
       break
     }
     case 'update': {
       await api.update(u => {
-        if (msg.addNodes) u.addNodes?.(...msg.addNodes)
-        if (msg.removeNodes) msg.removeNodes.forEach(n => u.deleteNode(n as any))
-        if (msg.updateNodes) msg.updateNodes.forEach(n => u.updateNode(n))
-        if (msg.addEdges) u.addEdges?.(...msg.addEdges)
-        if (msg.removeEdges) msg.removeEdges.forEach(e => u.deleteEdge(e as any))
-        if (msg.updateEdges) msg.updateEdges.forEach(e => u.updateEdge(e))
-        if (msg.description) u.setDescription?.(msg.description)
+        if (msg.addNodes) u.addNodes(...msg.addNodes)
+        if (msg.removeNodes) u.deleteNodes(...msg.removeNodes)
+        if (msg.updateNodes) u.updateNodes(...msg.updateNodes)
+        if (msg.addEdges) u.addEdges(...msg.addEdges)
+        if (msg.removeEdges) u.deleteEdges(...msg.removeEdges)
+        if (msg.updateEdges) u.updateEdges(...msg.updateEdges)
+        if (msg.description) u.describe(msg.description)
       })
       break
     }

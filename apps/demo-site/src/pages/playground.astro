@@ -63,19 +63,15 @@ import { examples, exampleList } from '../examples';
         <div class="nav-controls">
           <button class="nav-btn" id="nav-first" title="First (Home)">⏮</button>
           <button class="nav-btn" id="nav-prev" title="Previous (←)">◀</button>
-          <span id="history-label" style="min-width: 4rem; text-align: center;">— / —</span>
+          <span id="history-label" style="min-width: 4rem; text-align: center; display: inline-flex; align-items: center; justify-content: center; height: 2.25rem;">— / —</span>
           <button class="nav-btn" id="nav-next" title="Next (→)">▶</button>
           <button class="nav-btn" id="nav-last" title="Last (End)">⏭</button>
         </div>
         <div class="connect-controls" style="display:flex; gap:.5rem; align-items:center;">
-          <input id="ws-url" value="ws://localhost:8787" style="width:16rem;" />
-          <button class="nav-btn" id="ws-connect">Connect WS</button>
-          <button class="nav-btn" id="ws-disconnect">Disconnect</button>
-          <button class="nav-btn" id="fs-open">Open Folder</button>
-          <span id="ingest-status" style="font-size:.85rem; color:var(--color-text-muted)">Idle</span>
+          <button class="nav-btn source-icon-btn" id="source-icon" title="Data Source Connection">📡</button>
         </div>
-        <button class="nav-btn" id="help-btn" title="How to edit">❓ Help</button>
-        <button class="nav-btn" id="edit-toggle" title="Toggle edit mode">✎ Edit Me!</button>
+        <button class="nav-btn" id="help-btn" title="How to edit">❓</button>
+        <button class="nav-btn" id="edit-toggle" title="Toggle edit mode">✎ Edit</button>
         <button class="nav-btn" id="rebuild" title="Rebuild graph from scratch">🔄 Rebuild</button>
       </div>
       <div class="graph-container" id="playground-graph"></div>
@@ -184,6 +180,7 @@ import { examples, exampleList } from '../examples';
 
   .nav-controls {
     display: flex;
+    align-items: center;
     gap: 0.25rem;
   }
 
@@ -196,6 +193,11 @@ import { examples, exampleList } from '../examples';
     font-size: 0.875rem;
     color: var(--color-text);
     transition: all 0.15s;
+    height: 2.25rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
   }
 
   .nav-btn:hover:not(:disabled) {
@@ -213,6 +215,71 @@ import { examples, exampleList } from '../examples';
     border-color: var(--color-primary);
     color: #fff;
     font-weight: 600;
+  }
+
+  /* Source Icon Button */
+  .source-icon-btn {
+    font-size: 1.1rem;
+    padding: 0.5rem;
+    min-width: 2.5rem;
+    position: relative;
+    height: 2.25rem;
+  }
+
+  .source-icon-btn::after {
+    content: '';
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--color-border);
+    border: 1px solid var(--color-bg);
+  }
+
+  .source-icon-btn.active::after {
+    background: rgb(34, 197, 94);
+    box-shadow: 0 0 4px rgba(34, 197, 94, 0.5);
+  }
+
+  .source-icon-btn.connecting::after {
+    background: rgb(251, 191, 36);
+    box-shadow: 0 0 4px rgba(251, 191, 36, 0.5);
+    animation: pulse-dot 1.5s ease-in-out infinite;
+  }
+
+  .source-icon-btn.error::after {
+    background: rgb(239, 68, 68);
+    box-shadow: 0 0 4px rgba(239, 68, 68, 0.5);
+  }
+
+  .source-icon-btn.active {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: #fff;
+  }
+
+  .source-icon-btn.connecting {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: #fff;
+    opacity: 0.7;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  .source-icon-btn.error {
+    border-color: rgb(239, 68, 68);
+  }
+
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.8); }
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 0.7; }
+    50% { opacity: 1; }
   }
 
   .graph-container {
@@ -269,6 +336,125 @@ import { examples, exampleList } from '../examples';
   .modal-body ul {
     margin: 0.5rem 0 0 1.25rem;
   }
+  .modal-body .form-group {
+    margin-bottom: 1rem;
+  }
+  .modal-body label {
+    display: block;
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+    margin-bottom: 0.5rem;
+  }
+  .modal-body input[type="text"] {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid var(--color-border);
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+    background: var(--color-bg);
+    color: var(--color-text);
+  }
+  .modal-body .button-group {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+  .modal-body .button-group button {
+    flex: 1;
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--color-border);
+    border-radius: 0.25rem;
+    background: var(--color-bg-secondary);
+    color: var(--color-text);
+    cursor: pointer;
+    font-size: 0.875rem;
+    transition: all 0.15s;
+  }
+  .modal-body .button-group button:hover:not(:disabled) {
+    background: var(--color-border);
+  }
+  .modal-body .button-group button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .modal-body .button-group button.primary {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: #fff;
+  }
+  .modal-body .button-group button.primary:hover:not(:disabled) {
+    background: var(--color-primary);
+    opacity: 0.9;
+  }
+  .modal-body .status-message {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+  }
+  .modal-body .status-message.info {
+    background: rgba(59, 130, 246, 0.1);
+    color: rgb(59, 130, 246);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+  }
+  .modal-body .status-message.error {
+    background: rgba(239, 68, 68, 0.1);
+    color: rgb(239, 68, 68);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+  }
+  .modal-body .status-message.success {
+    background: rgba(34, 197, 94, 0.1);
+    color: rgb(34, 197, 94);
+    border: 1px solid rgba(34, 197, 94, 0.2);
+  }
+  .modal-body .loading-spinner {
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid var(--color-border);
+    border-top-color: var(--color-primary);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    margin-right: 0.5rem;
+    vertical-align: middle;
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  .modal-body .source-type-selector {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    padding: 0.5rem;
+    background: var(--color-bg-secondary);
+    border-radius: 0.25rem;
+  }
+  .modal-body .source-type-option {
+    flex: 1;
+    padding: 0.5rem;
+    border: 1px solid var(--color-border);
+    border-radius: 0.25rem;
+    background: var(--color-bg);
+    color: var(--color-text);
+    cursor: pointer;
+    text-align: center;
+    font-size: 0.875rem;
+    transition: all 0.15s;
+  }
+  .modal-body .source-type-option:hover {
+    background: var(--color-border);
+  }
+  .modal-body .source-type-option.active {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: #fff;
+  }
+  .modal-body .source-controls {
+    display: none;
+  }
+  .modal-body .source-controls.active {
+    display: block;
+  }
 </style>
 
 <script>
@@ -283,6 +469,11 @@ import { examples, exampleList } from '../examples';
   let isEditable = false;
   let wsSource: WebSocketSource<any, any> | null = null;
   let fsSource: FileSystemSource<any, any> | null = null;
+  let wsStatus: 'disconnected' | 'connecting' | 'connected' | 'error' = 'disconnected';
+  let fsStatus: 'disconnected' | 'opening' | 'connected' | 'error' = 'disconnected';
+  let activeSourceType: 'ws' | 'folder' | null = null;
+  let wsUrl = 'ws://localhost:8787';
+  let sourceModal: HTMLElement | null = null;
 
   function getResolvedColorMode(): 'light' | 'dark' {
     const mode = (document.getElementById('colorMode') as HTMLSelectElement).value;
@@ -373,7 +564,7 @@ import { examples, exampleList } from '../examples';
   document.getElementById('edit-toggle')?.addEventListener('click', () => {
     isEditable = !isEditable;
     const btn = document.getElementById('edit-toggle');
-    if (btn) btn.textContent = isEditable ? '✓ Done Editing' : '✎ Edit Me!';
+    if (btn) btn.textContent = isEditable ? '✓ Done' : '✎ Edit';
     const rebuildBtn = document.getElementById('rebuild') as HTMLButtonElement | null;
     if (rebuildBtn) rebuildBtn.disabled = !isEditable;
     try {
@@ -397,7 +588,7 @@ import { examples, exampleList } from '../examples';
           <div class="modal-body">
             <p>Here’s how to edit the graph:</p>
             <ul>
-              <li><strong>Enable editing</strong>: Click “Edit Me!”</li>
+              <li><strong>Enable editing</strong>: Click "Edit"</li>
               <li><strong>Add a node</strong>: Double‑click an empty area</li>
               <li><strong>Edit a node</strong>: Double‑click a node</li>
               <li><strong>Edit an edge</strong>: Double‑click an edge</li>
@@ -405,7 +596,7 @@ import { examples, exampleList } from '../examples';
               <li><strong>Pan</strong>: Drag on canvas or edges; <strong>Zoom</strong>: Mouse wheel or controls</li>
               <li><strong>Rebuild</strong>: Use “Rebuild” to re-layout from scratch (enabled in edit mode)</li>
             </ul>
-            <p>When you’re done, click “Done Editing” to lock the canvas.</p>
+            <p>When you're done, click "Done" to lock the canvas.</p>
           </div>
         </div>
       `;
@@ -425,26 +616,406 @@ import { examples, exampleList } from '../examples';
   helpBtn?.addEventListener('click', openHelp);
 
   // Ingest wiring
-  const statusEl = document.getElementById('ingest-status');
-  function setStatus(text: string) { if (statusEl) statusEl.textContent = text }
   function handleIngestMessage(msg: any) {
     if (!currentGraph) return;
     applyIngestMessage(currentGraph, msg);
   }
-  document.getElementById('ws-connect')?.addEventListener('click', () => {
-    const url = (document.getElementById('ws-url') as HTMLInputElement)?.value || 'ws://localhost:8787';
-    if (wsSource) wsSource.disconnect();
-    wsSource = new WebSocketSource(url, handleIngestMessage, (s) => setStatus(`WS: ${s}`));
+
+  // Source connection state management
+  function updateSourceIcon() {
+    const iconBtn = document.getElementById('source-icon');
+    if (!iconBtn) return;
+    iconBtn.classList.remove('active', 'connecting', 'error');
+
+    const isConnected = (activeSourceType === 'ws' && wsStatus === 'connected') ||
+                        (activeSourceType === 'folder' && fsStatus === 'connected');
+    const isConnecting = (activeSourceType === 'ws' && wsStatus === 'connecting') ||
+                         (activeSourceType === 'folder' && fsStatus === 'opening');
+    const hasError = (activeSourceType === 'ws' && wsStatus === 'error') ||
+                     (activeSourceType === 'folder' && fsStatus === 'error');
+
+    if (isConnected) {
+      iconBtn.classList.add('active');
+      // Update icon based on source type
+      iconBtn.textContent = activeSourceType === 'folder' ? '📁' : '📡';
+    } else if (isConnecting) {
+      iconBtn.classList.add('connecting');
+      iconBtn.textContent = activeSourceType === 'folder' ? '📁' : '📡';
+    } else if (hasError) {
+      iconBtn.classList.add('error');
+      iconBtn.textContent = activeSourceType === 'folder' ? '📁' : '📡';
+    } else {
+      iconBtn.textContent = '📡';
+    }
+  }
+
+  function updateWsStatus(status: 'connecting' | 'connected' | 'reconnecting' | 'closed' | 'error', detail?: any) {
+    if (status === 'connecting' || status === 'reconnecting') {
+      wsStatus = 'connecting';
+      activeSourceType = 'ws';
+    } else if (status === 'connected') {
+      wsStatus = 'connected';
+      activeSourceType = 'ws';
+      // Disconnect folder if connected
+      if (fsSource && fsStatus === 'connected') {
+        fsSource.close();
+      }
+    } else if (status === 'error') {
+      wsStatus = 'error';
+    } else {
+      wsStatus = 'disconnected';
+      if (activeSourceType === 'ws') {
+        activeSourceType = null;
+      }
+    }
+    updateSourceIcon();
+    updateStatusText();
+    updateSourceModal();
+  }
+
+  function updateFsStatus(status: 'idle' | 'opened' | 'reading' | 'error' | 'closed', detail?: any) {
+    if (status === 'opened') {
+      fsStatus = 'opening';
+      activeSourceType = 'folder';
+      // Disconnect WS if connected
+      if (wsSource && wsStatus === 'connected') {
+        wsSource.disconnect();
+      }
+    } else if (status === 'reading') {
+      fsStatus = 'connected';
+      activeSourceType = 'folder';
+    } else if (status === 'error') {
+      fsStatus = 'error';
+    } else if (status === 'closed') {
+      fsStatus = 'disconnected';
+      if (activeSourceType === 'folder') {
+        activeSourceType = null;
+      }
+    } else {
+      fsStatus = 'disconnected';
+    }
+    updateSourceIcon();
+    updateStatusText();
+    updateSourceModal();
+  }
+
+  function updateStatusText() {
+    // Status is now purely visual via the icon indicator
+    // No text status needed
+  }
+
+  // Source Modal management
+  function createSourceModal() {
+    if (sourceModal) return sourceModal;
+
+    sourceModal = document.createElement('div');
+    sourceModal.className = 'modal-overlay';
+    sourceModal.style.display = 'none';
+    sourceModal.innerHTML = `
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="source-modal-title">
+        <div class="modal-header">
+          <h3 id="source-modal-title">Data Source Connection</h3>
+          <button class="modal-close" title="Close" aria-label="Close">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="source-type-selector">
+            <button class="source-type-option" data-source="ws">📡 WebSocket</button>
+            <button class="source-type-option" data-source="folder">📁 Folder</button>
+          </div>
+
+          <div class="source-controls" data-source="ws">
+            <div class="form-group">
+              <label for="source-modal-url">WebSocket URL</label>
+              <input type="text" id="source-modal-url" value="${wsUrl}" />
+            </div>
+            <div class="button-group">
+              <button id="source-modal-connect-ws" class="primary">Connect</button>
+              <button id="source-modal-disconnect-ws">Disconnect</button>
+              <button id="source-modal-change-ws">Change Connection</button>
+            </div>
+          </div>
+
+          <div class="source-controls" data-source="folder">
+            <div class="form-group">
+              <label>File System Source</label>
+              <p style="font-size: 0.875rem; color: var(--color-text-muted); margin-top: 0.25rem;">
+                Select a directory containing a graph.ndjson file to watch for changes.
+              </p>
+            </div>
+            <div class="button-group">
+              <button id="source-modal-connect-folder" class="primary">Open Folder</button>
+              <button id="source-modal-disconnect-folder">Disconnect</button>
+            </div>
+          </div>
+
+          <div id="source-modal-status"></div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(sourceModal);
+
+    // Close modal handlers
+    sourceModal.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      if (target.classList.contains('modal-overlay') || target.classList.contains('modal-close')) {
+        closeSourceModal();
+      }
+    });
+
+    // Source type selector
+    sourceModal.querySelectorAll('.source-type-option').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const sourceType = btn.getAttribute('data-source');
+        if (sourceType) {
+          selectSourceType(sourceType as 'ws' | 'folder');
+        }
+      });
+    });
+
+    // Button handlers
+    document.getElementById('source-modal-connect-ws')?.addEventListener('click', handleConnect);
+    document.getElementById('source-modal-disconnect-ws')?.addEventListener('click', handleDisconnect);
+    document.getElementById('source-modal-change-ws')?.addEventListener('click', handleChangeConnection);
+    document.getElementById('source-modal-connect-folder')?.addEventListener('click', handleOpenFolder);
+    document.getElementById('source-modal-disconnect-folder')?.addEventListener('click', handleCloseFolder);
+
+    // Enter key on input
+    document.getElementById('source-modal-url')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && wsStatus !== 'connected') {
+        handleConnect();
+      }
+    });
+
+    return sourceModal;
+  }
+
+  function selectSourceType(type: 'ws' | 'folder', skipUpdate = false) {
+    if (!sourceModal) return;
+
+    // Update selector UI
+    sourceModal.querySelectorAll('.source-type-option').forEach(btn => {
+      if (btn.getAttribute('data-source') === type) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+
+    // Show/hide controls
+    sourceModal.querySelectorAll('.source-controls').forEach(controls => {
+      if (controls.getAttribute('data-source') === type) {
+        controls.classList.add('active');
+      } else {
+        controls.classList.remove('active');
+      }
+    });
+
+    // Only update the rest of the modal if not skipping (to avoid circular calls)
+    if (!skipUpdate) {
+      updateSourceModalContent();
+    }
+  }
+
+  function updateSourceModalContent() {
+    if (!sourceModal) return;
+
+    // Update WS controls
+    const urlInput = document.getElementById('source-modal-url') as HTMLInputElement;
+    const connectWsBtn = document.getElementById('source-modal-connect-ws') as HTMLButtonElement;
+    const disconnectWsBtn = document.getElementById('source-modal-disconnect-ws') as HTMLButtonElement;
+    const changeWsBtn = document.getElementById('source-modal-change-ws') as HTMLButtonElement;
+
+    if (urlInput && connectWsBtn && disconnectWsBtn && changeWsBtn) {
+      const isWsConnected = wsStatus === 'connected';
+      const isWsConnecting = wsStatus === 'connecting';
+
+      connectWsBtn.disabled = isWsConnected || isWsConnecting;
+      disconnectWsBtn.disabled = !isWsConnected || isWsConnecting;
+      changeWsBtn.disabled = !isWsConnected || isWsConnecting;
+      urlInput.disabled = isWsConnecting;
+    }
+
+    // Update Folder controls
+    const connectFolderBtn = document.getElementById('source-modal-connect-folder') as HTMLButtonElement;
+    const disconnectFolderBtn = document.getElementById('source-modal-disconnect-folder') as HTMLButtonElement;
+
+    if (connectFolderBtn && disconnectFolderBtn) {
+      const isFolderConnected = fsStatus === 'connected';
+      const isFolderOpening = fsStatus === 'opening';
+
+      connectFolderBtn.disabled = isFolderConnected || isFolderOpening;
+      disconnectFolderBtn.disabled = !isFolderConnected || isFolderOpening;
+    }
+
+    // Update status message
+    const statusDiv = document.getElementById('source-modal-status');
+    if (!statusDiv) return;
+
+    statusDiv.innerHTML = '';
+
+    if (activeSourceType === 'ws') {
+      if (wsStatus === 'connecting') {
+        statusDiv.innerHTML = `
+          <div class="status-message info">
+            <span class="loading-spinner"></span>
+            Connecting to ${urlInput?.value || wsUrl}...
+          </div>
+        `;
+      } else if (wsStatus === 'connected') {
+        statusDiv.innerHTML = `
+          <div class="status-message success">
+            ✓ Connected to ${urlInput?.value || wsUrl}
+          </div>
+        `;
+      } else if (wsStatus === 'error') {
+        statusDiv.innerHTML = `
+          <div class="status-message error">
+            ✗ Connection error. Please check the URL and try again.
+          </div>
+        `;
+      } else {
+        statusDiv.innerHTML = `
+          <div class="status-message info">
+            Not connected
+          </div>
+        `;
+      }
+    } else if (activeSourceType === 'folder') {
+      if (fsStatus === 'opening') {
+        statusDiv.innerHTML = `
+          <div class="status-message info">
+            <span class="loading-spinner"></span>
+            Opening folder...
+          </div>
+        `;
+      } else if (fsStatus === 'connected') {
+        statusDiv.innerHTML = `
+          <div class="status-message success">
+            ✓ Folder connected and watching for changes
+          </div>
+        `;
+      } else if (fsStatus === 'error') {
+        statusDiv.innerHTML = `
+          <div class="status-message error">
+            ✗ Error opening folder. Please try again.
+          </div>
+        `;
+      } else {
+        statusDiv.innerHTML = `
+          <div class="status-message info">
+            Not connected
+          </div>
+        `;
+      }
+    } else {
+      statusDiv.innerHTML = `
+        <div class="status-message info">
+          Select a source type to connect
+        </div>
+      `;
+    }
+  }
+
+  function updateSourceModal() {
+    if (!sourceModal) return;
+
+    // Update source type selector based on active source (skip the update to avoid circular call)
+    const activeType = activeSourceType || 'ws';
+    selectSourceType(activeType, true);
+
+    // Update the rest of the modal content
+    updateSourceModalContent();
+  }
+
+  function openSourceModal() {
+    createSourceModal();
+    if (sourceModal) {
+      const urlInput = document.getElementById('source-modal-url') as HTMLInputElement;
+      if (urlInput) {
+        urlInput.value = wsUrl;
+      }
+      // Select the active source type or default to ws
+      const activeType = activeSourceType || 'ws';
+      selectSourceType(activeType);
+      updateSourceModal();
+      sourceModal.style.display = 'flex';
+    } else {
+      console.error('Failed to create source modal');
+    }
+  }
+
+  function closeSourceModal() {
+    if (sourceModal) {
+      sourceModal.style.display = 'none';
+    }
+  }
+
+  function handleConnect() {
+    const urlInput = document.getElementById('source-modal-url') as HTMLInputElement;
+    if (!urlInput) return;
+
+    const url = urlInput.value.trim() || 'ws://localhost:8787';
+    wsUrl = url;
+
+    if (wsSource) {
+      wsSource.disconnect();
+    }
+
+    wsSource = new WebSocketSource(url, handleIngestMessage, updateWsStatus);
     wsSource.connect();
-  });
-  document.getElementById('ws-disconnect')?.addEventListener('click', () => {
+    updateSourceModal();
+  }
+
+  function handleDisconnect() {
     wsSource?.disconnect();
-    setStatus('WS: closed');
-  });
-  document.getElementById('fs-open')?.addEventListener('click', async () => {
-    if (!fsSource) fsSource = new FileSystemSource(handleIngestMessage, (s) => setStatus(`FS: ${s}`));
+    updateSourceModal();
+  }
+
+  function handleChangeConnection() {
+    if (wsSource) {
+      wsSource.disconnect();
+    }
+    const urlInput = document.getElementById('source-modal-url') as HTMLInputElement;
+    if (urlInput) {
+      urlInput.focus();
+      urlInput.select();
+    }
+    updateSourceModal();
+  }
+
+  async function handleOpenFolder() {
+    if (!fsSource) {
+      fsSource = new FileSystemSource(handleIngestMessage, updateFsStatus);
+    }
+    updateSourceModal();
     await fsSource.openDirectory();
-  });
+  }
+
+  function handleCloseFolder() {
+    fsSource?.close();
+    updateSourceModal();
+  }
+
+  // Source Icon button click handler
+  function attachSourceIconListener() {
+    const sourceIconBtn = document.getElementById('source-icon');
+    if (sourceIconBtn) {
+      sourceIconBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        openSourceModal();
+      });
+    } else {
+      console.error('Source icon button not found');
+    }
+  }
+
+  // Attach listener when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', attachSourceIconListener);
+  } else {
+    attachSourceIconListener();
+  }
 
   // Keyboard shortcuts for navigation
   document.addEventListener('keydown', (e) => {
@@ -471,4 +1042,7 @@ import { examples, exampleList } from '../examples';
   renderGraph();
   // Ensure rebuild state matches initial edit mode
   (document.getElementById('rebuild') as HTMLButtonElement | null)?.setAttribute('disabled', (!isEditable).toString());
+  // Initialize source icon state
+  updateSourceIcon();
+  updateStatusText();
 </script>

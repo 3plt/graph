@@ -1,4 +1,4 @@
-# Ingest Protocol (Diffract → @3plate/graph)
+# Ingest Protocol (Application → @3plate/graph)
 
 Messages are JSON (or NDJSON one per line). Three forms:
 

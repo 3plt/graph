@@ -1,20 +1,18 @@
-# demo-site
+# site
 
-Unified documentation and demo site for @3plate/graph, showcasing all framework integrations.
+Unified documentation and demo site for @3plate/graph.
 
 ## Tech Stack
 
-- **Astro** - Static site generator with multi-framework support
-- **React** - React demo components
-- **Vue** - Vue demo components
+- **Astro** - Static site generator
 - **TypeScript** - Type-safe development
 
 ## Features
 
 - Beautiful landing page with feature highlights
-- Interactive demo with framework tabs (React, Vue, Angular)
+- Interactive playground for testing graph functionality
 - Installation instructions
-- Code examples for each framework
+- Code examples
 - Fully responsive design
 - Deployed to GitHub Pages
 
@@ -28,24 +26,23 @@ pnpm dev:site
 pnpm build:site
 
 # Preview production build
-pnpm --filter demo-site preview
+pnpm --filter site preview
 ```
 
 ## Structure
 
 ```
-demo-site/
+site/
 ├── src/
 │   ├── components/
 │   │   ├── Header.astro        # Site header/navigation
-│   │   ├── DemoSection.astro   # Tab-based demo section
-│   │   ├── ReactDemo.tsx       # React demo component
-│   │   ├── VueDemo.vue         # Vue demo component
+│   │   ├── CoreDemo.astro      # Core demo component
 │   │   └── demo.css            # Shared demo styles
 │   ├── layouts/
 │   │   └── Layout.astro        # Base layout
 │   └── pages/
-│       └── index.astro         # Landing page
+│       ├── index.astro         # Landing page
+│       └── playground.astro    # Interactive playground
 ├── public/
 │   └── favicon.svg
 └── astro.config.mjs
@@ -61,6 +58,6 @@ The workflow builds:
 2. React wrapper (`@3plate/graph-react`)
 3. Vue wrapper (`@3plate/graph-vue`)
 4. Angular wrapper (`@3plate/graph-angular`)
-4. Demo site (`demo-site`)
+5. Site (`site`)
 
 And deploys the built site to `https://3plt.github.io/graph`

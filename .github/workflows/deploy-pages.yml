@@ -27,6 +27,6 @@ jobs:
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: apps/demo-site/dist
+          path: apps/site/dist
 
       - uses: actions/deploy-pages@v4

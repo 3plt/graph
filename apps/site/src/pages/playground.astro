@@ -1,0 +1,23 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import { examples } from '../examples';
+---
+
+<Layout title="Playground - @3plate/graph">
+  <Header />
+
+  <div id="playground-root"></div>
+</Layout>
+
+<script>
+  import { Playground } from '@3plate/graph-core';
+  import { examples } from '../examples';
+
+  const playground = new Playground({
+    root: 'playground-root',
+    examples
+  });
+
+  playground.init();
+</script>

@@ -118,10 +118,7 @@ graph/
 │   ├── vue/          # Vue wrapper
 │   └── angular/      # Angular wrapper
 ├── apps/             # Demo applications
-│   ├── demo-site/    # Unified Astro demo site
-│   ├── demo-react/   # React dev playground
-│   ├── demo-vue/     # Vue dev playground
-│   └── demo-angular/ # Angular dev playground
+│   └── site/         # Unified Astro demo site
 └── .github/          # CI/CD workflows
 ```
 

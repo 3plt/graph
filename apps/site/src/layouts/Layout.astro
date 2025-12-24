@@ -26,7 +26,7 @@ const LOG_LEVEL = import.meta.env.VITE_LOG_LEVEL || 'info';
         if (IS_DEV_VAL && ENDPOINT_VAL) {
           window['__LOG_INGEST_URL'] = ENDPOINT_VAL;
           window['__LOG_LEVEL'] = LOG_LEVEL_VAL;
-          try { console.log('[demo-site] logging configured', { endpoint: ENDPOINT_VAL, level: LOG_LEVEL_VAL }) } catch {}
+          try { console.log('[site] logging configured', { endpoint: ENDPOINT_VAL, level: LOG_LEVEL_VAL }) } catch {}
         }
         // Forward uncaught errors to collector (if set)
         function sendLine(obj) {

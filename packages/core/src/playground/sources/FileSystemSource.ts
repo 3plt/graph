@@ -1,4 +1,4 @@
-import type { IngestMessage } from '@3plate/graph-core'
+import type { IngestMessage } from '../../api/ingest'
 
 type StatusListener = (status: 'idle' | 'opened' | 'reading' | 'error' | 'closed', detail?: any) => void
 
@@ -69,3 +69,4 @@ export class FileSystemSource<N, E> {
     }
   }
 }
+

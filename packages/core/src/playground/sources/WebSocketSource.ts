@@ -1,4 +1,4 @@
-import type { IngestMessage } from '@3plate/graph-core'
+import type { IngestMessage } from '../../api/ingest'
 
 type StatusListener = (status: 'connecting' | 'connected' | 'reconnecting' | 'closed' | 'error', detail?: any) => void
 
@@ -116,3 +116,4 @@ export class WebSocketSource<N, E> {
     }
   }
 }
+

@@ -723,8 +723,9 @@ export class Playground {
   private updateSourceModal() {
     if (!this.sourceModal) return
 
-    const activeType = this.activeSourceType || 'ws'
-    this.selectSourceType(activeType, true)
+    // Map file source to ws for modal display (file sources are handled via examples)
+    const activeType = (this.activeSourceType === 'file' ? 'ws' : this.activeSourceType) || 'ws'
+    this.selectSourceType(activeType as 'ws' | 'folder', true)
     this.updateSourceModalContent()
   }
 
@@ -735,8 +736,9 @@ export class Playground {
       if (urlInput) {
         urlInput.value = this.wsUrl
       }
-      const activeType = this.activeSourceType || 'ws'
-      this.selectSourceType(activeType)
+      // Map file source to ws for modal display (file sources are handled via examples)
+      const activeType = (this.activeSourceType === 'file' ? 'ws' : this.activeSourceType) || 'ws'
+      this.selectSourceType(activeType as 'ws' | 'folder')
       this.updateSourceModal()
       this.sourceModal.style.display = 'flex'
     }

@@ -53,18 +53,11 @@ graph/
 │       └── ...
 │
 ├── apps/
-│   ├── demo-react/
-│   │   ├── src/
-│   │   ├── public/
-│   │   ├── index.html
-│   │   ├── vite.config.js
-│   │   └── package.json
-│   │
-│   ├── demo-vue/
-│   |   └── ...
-│   │
-│   └── demo-angular/
-│       └── ...
+│   └── site/
+│       ├── src/
+│       ├── public/
+│       ├── astro.config.mjs
+│       └── package.json
 │
 ├── .github/
 │   └── workflows/

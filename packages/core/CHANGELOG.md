@@ -1,5 +1,11 @@
 # @3plate/graph-core
 
+## 0.1.6
+
+### Patch Changes
+
+- Add live ingestion
+
 ## 0.1.5
 
 ### Patch Changes

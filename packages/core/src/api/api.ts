@@ -4,12 +4,15 @@ import { EdgeId, PublicEdgeData } from '../graph/edge'
 import { SegId } from '../graph/seg'
 import { Mutator } from '../graph/mutator'
 import { MarkerType } from '../canvas/marker'
-import { APIArguments, Update, NodeProps, EdgeProps, EdgeEnd, EventsOptions, NewNode, NewEdge, ThemeVars } from './options'
+import { APIArguments, Update, NodeProps, EdgeProps, EdgeEnd, EventsOptions, NewNode, NewEdge, ThemeVars, IngestionConfig } from './options'
 import { Defaults, applyDefaults } from './defaults'
 import { PublicNodeData, NodeId, PortId } from '../graph/node'
 import { Node } from '../canvas/node'
 import { Nav, Dir } from '../common'
 import { Updater } from './updater'
+import { Ingest, IngestMessage } from './ingest'
+import { WebSocketSource } from './sources/WebSocketSource'
+import { FileSource } from './sources/FileSource'
 import { logger } from '../log'
 
 const log = logger('api')
@@ -47,12 +50,16 @@ export class API<N, E> {
   private nextNodeId!: number
   private nextEdgeId!: number
   private events: EventsOptions<N, E>
+  private ingest?: Ingest<N, E>
+  private ingestionSource?: WebSocketSource<N, E> | FileSource<N, E>
+  private ingestionConfig?: IngestionConfig
   root: string
 
   constructor(args: APIArguments<N, E>) {
     this.root = args.root
     this.options = applyDefaults(args.options)
     this.events = args.events || {}
+    this.ingestionConfig = args.ingestion
 
     // reset graph state
     this.reset()
@@ -64,13 +71,18 @@ export class API<N, E> {
       orientation: this.options.graph.orientation,
     })
 
-    // store initial update or history
+    // store initial update or history (ingestion starts empty)
     if (args.history) {
       this.history = args.history
     } else if (args.nodes) {
       this.history = [Updater.add(args.nodes, args.edges || []).update]
     } else {
       this.history = []
+    }
+
+    // setup ingestion if configured
+    if (this.ingestionConfig) {
+      this.ingest = new Ingest(this)
     }
   }
 
@@ -96,9 +108,57 @@ export class API<N, E> {
     if (!root) throw new Error('root element not found')
     root.appendChild(this.canvas.container!)
     await this.applyHistory()
+
+    // Connect ingestion source if configured
+    if (this.ingestionConfig && this.ingest) {
+      this.connectIngestion()
+    }
+
     if (this.events.onInit) {
       this.events.onInit()
     }
+  }
+
+  /** Connect to the configured ingestion source */
+  private connectIngestion() {
+    if (!this.ingestionConfig || !this.ingest) return
+
+    const handleMessage = (msg: IngestMessage<N, E>) => {
+      this.ingest!.apply(msg)
+    }
+
+    switch (this.ingestionConfig.type) {
+      case 'websocket':
+        this.ingestionSource = new WebSocketSource<N, E>(
+          this.ingestionConfig.url,
+          handleMessage,
+          undefined,
+          this.ingestionConfig.reconnectMs
+        )
+        this.ingestionSource.connect()
+        break
+      case 'file':
+        this.ingestionSource = new FileSource<N, E>(
+          this.ingestionConfig.url,
+          handleMessage,
+          undefined,
+          this.ingestionConfig.intervalMs
+        )
+        this.ingestionSource.connect()
+        break
+    }
+  }
+
+  /** Disconnect from the ingestion source */
+  private disconnectIngestion() {
+    if (!this.ingestionSource) return
+
+    if (this.ingestionSource instanceof WebSocketSource) {
+      this.ingestionSource.disconnect()
+    } else if (this.ingestionSource instanceof FileSource) {
+      this.ingestionSource.close()
+    }
+    this.ingestionSource = undefined
   }
 
   private async applyHistory() {
@@ -639,6 +699,7 @@ export class API<N, E> {
 
   /** Cleanup resources when the graph is destroyed */
   destroy() {
+    this.disconnectIngestion()
     this.canvas?.destroy()
   }
 }

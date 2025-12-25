@@ -1,5 +1,16 @@
 # @3plate/graph
 
+## 0.1.8
+
+### Patch Changes
+
+- Add direct ingestion to API, update README
+- Updated dependencies
+  - @3plate/graph-core@0.1.8
+  - @3plate/graph-angular@0.1.8
+  - @3plate/graph-react@0.1.8
+  - @3plate/graph-vue@0.1.8
+
 ## 0.1.7
 
 ### Patch Changes

@@ -9,10 +9,18 @@ import {
 import { MarkerType } from '../canvas/marker'
 
 /**
+ * Ingestion source configuration.
+ * Used to connect to an external data source for graph updates.
+ */
+export type IngestionConfig =
+  | { type: 'websocket', url: string, reconnectMs?: number }
+  | { type: 'file', url: string, intervalMs?: number }
+
+/**
  * Arguments to the API constructor.
  *
- * The caller can specify nodes and edges, or history,
- * but not both.
+ * The caller can specify nodes and edges, history, or ingestion config,
+ * but not multiple.
  *
  * The root element ID is required.
  */
@@ -25,6 +33,8 @@ export type APIArguments<N, E> = {
   edges?: E[]
   /** Initial history */
   history?: Update<N, E>[]
+  /** Ingestion source configuration */
+  ingestion?: IngestionConfig
   /** Events */
   events?: EventsOptions<N, E>
   /** Root element ID */

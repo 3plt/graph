@@ -1,5 +1,11 @@
 # @3plate/graph-core
 
+## 0.1.8
+
+### Patch Changes
+
+- Add direct ingestion to API, update README
+
 ## 0.1.7
 
 ### Patch Changes

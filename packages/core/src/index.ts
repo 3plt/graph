@@ -17,5 +17,5 @@ export * from './playground'
 
 // Export API types
 export type { API } from './api/api'
-export type { APIArguments, Update, APIOptions, EventsOptions } from './api/options'
+export type { APIArguments, Update, APIOptions, EventsOptions, IngestionConfig } from './api/options'
 export { Updater } from './api/updater'

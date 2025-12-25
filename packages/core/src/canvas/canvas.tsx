@@ -40,19 +40,25 @@ export class Canvas<N, E> {
   root?: SVGElement
   group?: SVGElement
   transform!: ViewportTransform
-  bounds: Bounds
+  bounds!: Bounds
   measurement?: HTMLElement
-  allNodes: Map<NodeKey, Node>
-  curNodes: Map<NodeId, Node>
-  curSegs: Map<SegId, Seg>
-  updating: boolean
+  allNodes!: Map<NodeKey, Node>
+  curNodes!: Map<NodeId, Node>
+  curSegs!: Map<SegId, Seg>
+  updating!: boolean
+
+  // Unique marker ID prefix for this canvas instance
+  markerPrefix: string
+
+  // Dynamic style element for this instance (for cleanup)
+  private dynamicStyleEl?: HTMLStyleElement
 
   // Pan-zoom state
   private panScale: { x: number, y: number } | null = null
   private zoomControls?: HTMLElement
 
   // Edit mode state machine
-  editMode: EditMode
+  editMode!: EditMode
   api: API<N, E>
 
   // New-edge visual element
@@ -64,6 +70,15 @@ export class Canvas<N, E> {
   constructor(api: API<N, E>, options: CanvasData<N, E>) {
     Object.assign(this, options)
     this.api = api
+    this.reset()
+    // Generate unique marker prefix based on root ID (sanitize for use in IDs)
+    this.markerPrefix = api.root.replace(/[^a-zA-Z0-9-_]/g, '-')
+    this.createMeasurementContainer()
+    this.createCanvasContainer()
+    if (this.panZoom) this.setupPanZoom()
+  }
+
+  reset() {
     this.allNodes = new Map()
     this.curNodes = new Map()
     this.curSegs = new Map()
@@ -72,9 +87,7 @@ export class Canvas<N, E> {
     this.transform = { x: 0, y: 0, scale: 1 }
     this.editMode = new EditMode()
     this.editMode.editable = this.editable
-    this.createMeasurementContainer()
-    this.createCanvasContainer()
-    if (this.panZoom) this.setupPanZoom()
+    if (this.group) this.group.innerHTML = ''
   }
 
   private createMeasurementContainer() {
@@ -274,18 +287,19 @@ export class Canvas<N, E> {
 
   private generateDynamicStyles(): string {
     let css = ''
+    const scope = `[data-g3p-instance="${this.markerPrefix}"]`
 
-    // Global theme overrides
-    css += themeToCSS(this.theme, `.g3p-canvas-container`)
+    // Global theme overrides (scoped to this instance)
+    css += themeToCSS(this.theme, scope)
 
-    // Node type styles
+    // Node type styles (scoped to this instance)
     for (const [type, vars] of Object.entries(this.nodeTypes)) {
-      css += themeToCSS(vars, `.g3p-node-type-${type}`, 'node')
+      css += themeToCSS(vars, `${scope} .g3p-node-type-${type}`, 'node')
     }
 
-    // Edge type styles
+    // Edge type styles (scoped to this instance)
     for (const [type, vars] of Object.entries(this.edgeTypes)) {
-      css += themeToCSS(vars, `.g3p-edge-type-${type}`)
+      css += themeToCSS(vars, `${scope} .g3p-edge-type-${type}`)
     }
 
     return css
@@ -300,12 +314,15 @@ export class Canvas<N, E> {
       document.head.appendChild(baseStyleEl)
     }
 
-    // Always inject dynamic styles (node/edge types) for this canvas instance
+    // Inject dynamic styles (node/edge types) scoped to this canvas instance
     const dynamicStyles = this.generateDynamicStyles()
     if (dynamicStyles) {
-      const dynamicStyleEl = document.createElement('style')
-      dynamicStyleEl.textContent = dynamicStyles
-      document.head.appendChild(dynamicStyleEl)
+      // Remove any previous dynamic styles for this instance
+      this.dynamicStyleEl?.remove()
+      this.dynamicStyleEl = document.createElement('style')
+      this.dynamicStyleEl.id = `g3p-styles-${this.markerPrefix}`
+      this.dynamicStyleEl.textContent = dynamicStyles
+      document.head.appendChild(this.dynamicStyleEl)
     }
 
     // Build color mode class
@@ -313,6 +330,7 @@ export class Canvas<N, E> {
 
     this.container = (<div
       className={`g3p-canvas-container ${colorModeClass}`.trim()}
+      data-g3p-instance={this.markerPrefix}
       ref={(el: HTMLElement) => this.container = el}
       onContextMenu={this.onContextMenu.bind(this)}
     >
@@ -327,8 +345,8 @@ export class Canvas<N, E> {
         onDblClick={this.onDoubleClick.bind(this)}
       >
         <defs>
-          {Object.values(markerDefs).map(marker => marker(this.markerSize, false))}
-          {Object.values(markerDefs).map(marker => marker(this.markerSize, true))}
+          {Object.values(markerDefs).map(marker => marker(this.markerSize, false, this.markerPrefix))}
+          {Object.values(markerDefs).map(marker => marker(this.markerSize, true, this.markerPrefix))}
         </defs>
         <g
           ref={(el: SVGElement) => this.group = el}
@@ -797,6 +815,48 @@ export class Canvas<N, E> {
     }
 
     return { type: 'canvas' }
+  }
+
+  /** Update theme and type styles dynamically */
+  updateStyles(options: { theme?: ThemeVars, nodeTypes?: Record<string, ThemeVars>, edgeTypes?: Record<string, ThemeVars> }) {
+    if (options.theme !== undefined) this.theme = options.theme
+    if (options.nodeTypes !== undefined) this.nodeTypes = options.nodeTypes
+    if (options.edgeTypes !== undefined) this.edgeTypes = options.edgeTypes
+
+    // Regenerate and replace dynamic styles
+    const dynamicStyles = this.generateDynamicStyles()
+    if (dynamicStyles) {
+      if (!this.dynamicStyleEl) {
+        this.dynamicStyleEl = document.createElement('style')
+        this.dynamicStyleEl.id = `g3p-styles-${this.markerPrefix}`
+        document.head.appendChild(this.dynamicStyleEl)
+      }
+      this.dynamicStyleEl.textContent = dynamicStyles
+    } else if (this.dynamicStyleEl) {
+      // No dynamic styles needed, remove the element
+      this.dynamicStyleEl.remove()
+      this.dynamicStyleEl = undefined
+    }
+  }
+
+  /** Update color mode without recreating the canvas */
+  setColorMode(colorMode: 'light' | 'dark' | 'system') {
+    if (!this.container) return
+    this.colorMode = colorMode
+    // Remove existing color mode classes
+    this.container.classList.remove('g3p-light', 'g3p-dark')
+    // Add new color mode class if not system
+    if (colorMode !== 'system') {
+      this.container.classList.add(`g3p-${colorMode}`)
+    }
+  }
+
+  /** Cleanup resources when the canvas is destroyed */
+  destroy() {
+    this.dynamicStyleEl?.remove()
+    this.dynamicStyleEl = undefined
+    this.measurement?.remove()
+    this.measurement = undefined
   }
 }
 

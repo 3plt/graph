@@ -4,7 +4,7 @@ import { EdgeId, PublicEdgeData } from '../graph/edge'
 import { SegId } from '../graph/seg'
 import { Mutator } from '../graph/mutator'
 import { MarkerType } from '../canvas/marker'
-import { APIArguments, Update, NodeProps, EdgeProps, EdgeEnd, EventsOptions, NewNode, NewEdge } from './options'
+import { APIArguments, Update, NodeProps, EdgeProps, EdgeEnd, EventsOptions, NewNode, NewEdge, ThemeVars } from './options'
 import { Defaults, applyDefaults } from './defaults'
 import { PublicNodeData, NodeId, PortId } from '../graph/node'
 import { Node } from '../canvas/node'
@@ -47,7 +47,7 @@ export class API<N, E> {
   private nextNodeId!: number
   private nextEdgeId!: number
   private events: EventsOptions<N, E>
-  private root: string
+  root: string
 
   constructor(args: APIArguments<N, E>) {
     this.root = args.root
@@ -87,6 +87,7 @@ export class API<N, E> {
     this.nodeFields = new Map()
     this.nextNodeId = 1
     this.nextEdgeId = 1
+    this.canvas?.reset?.()
   }
 
   /** Initialize the API */
@@ -95,6 +96,9 @@ export class API<N, E> {
     if (!root) throw new Error('root element not found')
     root.appendChild(this.canvas.container!)
     await this.applyHistory()
+    if (this.events.onInit) {
+      this.events.onInit()
+    }
   }
 
   private async applyHistory() {
@@ -621,5 +625,20 @@ export class API<N, E> {
       })
     else
       await this.deleteEdge(edge.data)
+  }
+
+  /** Update theme and type styles dynamically */
+  updateStyles(options: { theme?: ThemeVars, nodeTypes?: Record<string, ThemeVars>, edgeTypes?: Record<string, ThemeVars> }) {
+    this.canvas?.updateStyles(options)
+  }
+
+  /** Update color mode without recreating the canvas */
+  setColorMode(colorMode: 'light' | 'dark' | 'system') {
+    this.canvas?.setColorMode(colorMode)
+  }
+
+  /** Cleanup resources when the graph is destroyed */
+  destroy() {
+    this.canvas?.destroy()
   }
 }

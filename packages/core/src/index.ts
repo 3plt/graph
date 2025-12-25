@@ -14,3 +14,8 @@ export * from './api/sources/WebSocketSource'
 export * from './api/sources/FileSystemSource'
 export * from './api/sources/FileSource'
 export * from './playground'
+
+// Export API types
+export type { API } from './api/api'
+export type { APIArguments, Update, APIOptions, EventsOptions } from './api/options'
+export { Updater } from './api/updater'

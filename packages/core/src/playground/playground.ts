@@ -11,6 +11,7 @@ export class Playground {
   private options: PlaygroundOptions
   private rootElement: HTMLElement
   private currentExample: string
+  private examples: Record<string, Example>
   private currentGraph: API<any, any> | null = null
   private ingest: Ingest<any, any> | null = null
   private isEditable = false
@@ -29,7 +30,8 @@ export class Playground {
 
   constructor(options: PlaygroundOptions) {
     this.options = options
-    this.exampleList = Object.keys(options.examples)
+    this.examples = { ...options.examples }
+    this.exampleList = Object.keys(this.examples)
     this.currentExample = options.defaultExample || this.exampleList[0]
     this.graphContainerId = `playground-graph-${Math.random().toString(36).substr(2, 9)}`
 
@@ -67,7 +69,7 @@ export class Playground {
 
   private createDOM() {
     const exampleList = this.exampleList.map((key, i) => {
-      const example = this.options.examples[key]
+      const example = this.examples[key]
       const isActive = i === 0 || key === this.currentExample
       return `
         <button class="example-btn ${isActive ? 'active' : ''}" data-example="${key}">
@@ -158,7 +160,15 @@ export class Playground {
 
     // Option change handlers
     this.rootElement.querySelectorAll('.options select, .options input').forEach(el => {
-      el.addEventListener('change', () => this.renderGraph())
+      el.addEventListener('change', () => {
+        // Handle color mode changes efficiently without re-rendering
+        if (el.id === 'colorMode' && this.currentGraph) {
+          const mode = (el as HTMLSelectElement).value as 'light' | 'dark' | 'system'
+          this.currentGraph.setColorMode(mode)
+        } else {
+          this.renderGraph()
+        }
+      })
     })
 
     // Navigation controls
@@ -193,7 +203,7 @@ export class Playground {
       if (rebuildBtn) rebuildBtn.disabled = !this.isEditable
       try {
         this.currentGraph?.setEditable?.(this.isEditable)
-      } catch {}
+      } catch { }
     })
 
     // Help button
@@ -262,9 +272,13 @@ export class Playground {
     const container = this.rootElement.querySelector(`#${this.graphContainerId}`) as HTMLElement
     if (!container) return
 
+    // Destroy previous graph to clean up styles
+    this.currentGraph?.destroy()
+    this.currentGraph = null
+
     container.innerHTML = ''
 
-    const example = this.options.examples[this.currentExample]
+    const example = this.examples[this.currentExample]
     const options = this.getOptions(example.options)
 
     try {
@@ -298,7 +312,7 @@ export class Playground {
   }
 
   private connectExampleSource() {
-    const example = this.options.examples[this.currentExample]
+    const example = this.examples[this.currentExample]
     if (!example.source) {
       // No source specified, disconnect any active sources
       this.disconnectAllSources()
@@ -383,14 +397,14 @@ export class Playground {
     iconBtn.classList.remove('active', 'connecting', 'error')
 
     const isConnected = (this.activeSourceType === 'ws' && this.wsStatus === 'connected') ||
-                        (this.activeSourceType === 'folder' && this.fsStatus === 'connected') ||
-                        (this.activeSourceType === 'file' && this.fileStatus === 'connected')
+      (this.activeSourceType === 'folder' && this.fsStatus === 'connected') ||
+      (this.activeSourceType === 'file' && this.fileStatus === 'connected')
     const isConnecting = (this.activeSourceType === 'ws' && this.wsStatus === 'connecting') ||
-                         (this.activeSourceType === 'folder' && this.fsStatus === 'opening') ||
-                         (this.activeSourceType === 'file' && this.fileStatus === 'connecting')
+      (this.activeSourceType === 'folder' && this.fsStatus === 'opening') ||
+      (this.activeSourceType === 'file' && this.fileStatus === 'connecting')
     const hasError = (this.activeSourceType === 'ws' && this.wsStatus === 'error') ||
-                     (this.activeSourceType === 'folder' && this.fsStatus === 'error') ||
-                     (this.activeSourceType === 'file' && this.fileStatus === 'error')
+      (this.activeSourceType === 'folder' && this.fsStatus === 'error') ||
+      (this.activeSourceType === 'file' && this.fileStatus === 'error')
 
     let icon = '📡'
     if (this.activeSourceType === 'folder') {
@@ -683,7 +697,7 @@ export class Playground {
         `
       }
     } else if (this.activeSourceType === 'file') {
-      const example = this.options.examples[this.currentExample]
+      const example = this.examples[this.currentExample]
       const filePath = example.source?.type === 'file' ? example.source.path : ''
       if (this.fileStatus === 'connecting') {
         statusDiv.innerHTML = `
@@ -794,6 +808,66 @@ export class Playground {
   private handleCloseFolder() {
     this.fsSource?.close()
     this.updateSourceModal()
+  }
+
+  /**
+   * Add or update an example
+   */
+  addExample(key: string, example: Example) {
+    this.examples[key] = example
+    this.updateExampleList()
+    // If this is the current example, re-render
+    if (this.currentExample === key) {
+      this.renderGraph()
+      this.connectExampleSource()
+    }
+  }
+
+  /**
+   * Remove an example
+   */
+  removeExample(key: string) {
+    delete this.examples[key]
+    if (this.currentExample === key) {
+      // If we removed the current example, switch to the first available
+      this.exampleList = Object.keys(this.examples)
+      this.currentExample = this.exampleList[0] || ''
+      if (this.currentExample) {
+        this.renderGraph()
+        this.connectExampleSource()
+      }
+    }
+    this.updateExampleList()
+  }
+
+  /**
+   * Update the example list in the DOM
+   */
+  private updateExampleList() {
+    this.exampleList = Object.keys(this.examples)
+    const exampleListEl = this.rootElement.querySelector('.example-list')
+    if (!exampleListEl) return
+
+    exampleListEl.innerHTML = this.exampleList.map((key, i) => {
+      const example = this.examples[key]
+      const isActive = key === this.currentExample
+      return `
+        <button class="example-btn ${isActive ? 'active' : ''}" data-example="${key}">
+          ${example.name}
+        </button>
+      `
+    }).join('')
+
+    // Re-attach event listeners
+    exampleListEl.querySelectorAll('.example-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        this.rootElement.querySelectorAll('.example-btn').forEach(b => b.classList.remove('active'))
+        btn.classList.add('active')
+        this.currentExample = btn.getAttribute('data-example') || this.exampleList[0]
+        this.renderGraph()
+        this.connectExampleSource()
+      })
+    })
   }
 }
 

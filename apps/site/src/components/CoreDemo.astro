@@ -120,14 +120,20 @@ const defaultCode = generateCoreCode(defaultExample);
   import { getResolvedColorMode, setColorMode, onColorModeChange, syncColorModeSelects, type ColorMode } from '../utils/demoState';
 
   let currentGraph: any = null;
+  let currentExampleKey: string | null = null;
 
-  async function renderExample(exampleKey: string) {
+  async function renderExample(exampleKey: string, force: boolean = false) {
     const container = document.getElementById('core-graph-container');
     const codeDisplay = document.getElementById('core-code-display');
     if (!container) return;
 
     const example = examples[exampleKey];
     if (!example) return;
+
+    // If graph already exists with same example, don't re-render (unless forced)
+    if (currentGraph && currentExampleKey === exampleKey && !force) {
+      return;
+    }
 
     // Update code display with syntax highlighting
     if (codeDisplay) {
@@ -136,9 +142,15 @@ const defaultCode = generateCoreCode(defaultExample);
       codeDisplay.innerHTML = `<div class="code-block">${highlighted}</div>`;
     }
 
-    // Clear and re-render graph
+    // Destroy previous graph before creating new one
+    if (currentGraph) {
+      currentGraph.destroy();
+      currentGraph = null;
+    }
+
+    // Clear container
     container.innerHTML = '';
-    
+
     try {
       currentGraph = await graph({
         root: 'core-graph-container',
@@ -152,10 +164,16 @@ const defaultCode = generateCoreCode(defaultExample);
           },
         },
       });
+      currentExampleKey = exampleKey;
     } catch (e) {
       console.error('Failed to render example:', e);
       container.innerHTML = '<p style="padding: 2rem; color: #ef4444;">Failed to load graph</p>';
     }
+  }
+
+  function updateColorMode() {
+    if (!currentGraph) return;
+    currentGraph.setColorMode(getResolvedColorMode());
   }
 
   // Initialize
@@ -176,22 +194,25 @@ const defaultCode = generateCoreCode(defaultExample);
       colorModeSelect.addEventListener('change', () => {
         setColorMode(colorModeSelect.value as ColorMode);
         syncColorModeSelects();
-        renderExample(select?.value || 'diamond');
+        updateColorMode();
       });
     }
 
     // Listen for color mode changes from other demos
     onColorModeChange(() => {
-      renderExample(select?.value || 'diamond');
+      updateColorMode();
     });
 
     if (coreTab && corePanel) {
       if (corePanel.classList.contains('active')) {
         renderExample('diamond');
       }
-      
+
       coreTab.addEventListener('click', () => {
-        setTimeout(() => renderExample(select?.value || 'diamond'), 100);
+        // Only render if no graph exists yet (first time clicking the tab)
+        if (!currentGraph) {
+          setTimeout(() => renderExample(select?.value || 'diamond'), 100);
+        }
       });
     }
   });

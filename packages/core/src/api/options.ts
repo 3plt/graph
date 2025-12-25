@@ -75,6 +75,8 @@ export type GraphOptions = {
  * Events that can be handled by the user.
  */
 export type EventsOptions<N, E> = {
+  /** Called when the API has finished initializing */
+  onInit?: () => void
   /** Called when a node is clicked */
   nodeClick?: (node: N) => void
   /** Called when an edge is clicked */

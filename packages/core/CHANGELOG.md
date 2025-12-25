@@ -1,5 +1,11 @@
 # @3plate/graph-core
 
+## 0.1.7
+
+### Patch Changes
+
+- Implement React component
+
 ## 0.1.6
 
 ### Patch Changes

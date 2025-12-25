@@ -1,5 +1,6 @@
 import { defineConfig } from 'astro/config';
 import fs from 'node:fs';
+import path from 'node:path';
 import react from '@astrojs/react';
 import vue from '@astrojs/vue';
 
@@ -31,7 +32,11 @@ export default defineConfig({
       },
     ],
     resolve: {
-      conditions: ['source'],
+      conditions: ['source', 'import', 'module', 'default'],
+      alias: {
+        '@3plate/graph-core': path.resolve(path.dirname(new URL(import.meta.url).pathname), '../../packages/core/src/index.ts'),
+        '@3plate/graph-react': path.resolve(path.dirname(new URL(import.meta.url).pathname), '../../packages/react/src/index.ts'),
+      },
     },
   },
 });

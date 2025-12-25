@@ -53,6 +53,9 @@ export class Seg {
     if (this.source.isDummy) source = undefined
     if (this.target.isDummy) target = undefined
     const typeClass = this.type ? `g3p-edge-type-${this.type}` : ''
+    const prefix = this.canvas.markerPrefix
+    const markerStartId = source ? (prefix ? `${prefix}-g3p-marker-${source}-reverse` : `g3p-marker-${source}-reverse`) : undefined
+    const markerEndId = target ? (prefix ? `${prefix}-g3p-marker-${target}` : `g3p-marker-${target}`) : undefined
     return (
       <g
         ref={(el: SVGElement) => this.el = el}
@@ -64,8 +67,8 @@ export class Seg {
           d={this.svg}
           fill="none"
           className="g3p-seg-line"
-          markerStart={source ? `url(#g3p-marker-${source}-reverse)` : undefined}
-          markerEnd={target ? `url(#g3p-marker-${target})` : undefined}
+          markerStart={markerStartId ? `url(#${markerStartId})` : undefined}
+          markerEnd={markerEndId ? `url(#${markerEndId})` : undefined}
         />
         <path
           d={this.svg}

@@ -1,6 +1,6 @@
 {
   "name": "@3plate/graph-react",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "license": "GPL-3.0",
   "repository": {
     "type": "git",
@@ -25,12 +25,19 @@
   },
   "scripts": {
     "build": "tsup src/index.ts --format cjs,esm --dts --external react --external react-dom",
-    "dev": "tsup src/index.ts --format cjs,esm --dts --watch --external react --external react-dom"
+    "dev": "tsup src/index.ts --format cjs,esm --dts --watch --external react --external react-dom",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.1.0",
+    "@testing-library/user-event": "^14.5.2",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
+    "jsdom": "^25.0.1",
     "tsup": "^8.5.1",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^2.1.8"
   }
 }

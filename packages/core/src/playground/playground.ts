@@ -1,9 +1,9 @@
 import { graph } from '../index'
-import { applyIngestMessage } from '../api/ingest'
+import { Ingest } from '../api/ingest'
 import type { API } from '../api/api'
-import { WebSocketSource } from './sources/WebSocketSource'
-import { FileSystemSource } from './sources/FileSystemSource'
-import { FileSource } from './sources/FileSource'
+import { WebSocketSource } from '../api/sources/WebSocketSource'
+import { FileSystemSource } from '../api/sources/FileSystemSource'
+import { FileSource } from '../api/sources/FileSource'
 import type { PlaygroundOptions, Example } from './types'
 import styles from './styles.css?raw'
 
@@ -12,6 +12,7 @@ export class Playground {
   private rootElement: HTMLElement
   private currentExample: string
   private currentGraph: API<any, any> | null = null
+  private ingest: Ingest<any, any> | null = null
   private isEditable = false
   private wsSource: WebSocketSource<any, any> | null = null
   private fsSource: FileSystemSource<any, any> | null = null
@@ -276,6 +277,7 @@ export class Playground {
           historyChange: () => this.updateHistoryLabel(),
         }
       } as any)
+      this.ingest = new Ingest(this.currentGraph)
       this.updateHistoryLabel()
     } catch (e) {
       console.error('Failed to render graph:', e)
@@ -370,9 +372,9 @@ export class Playground {
     if (this.helpOverlay) this.helpOverlay.style.display = 'none'
   }
 
-  private handleIngestMessage(msg: any) {
-    if (!this.currentGraph) return
-    applyIngestMessage(this.currentGraph, msg)
+  private handleIngestMessage = async (msg: any) => {
+    if (!this.ingest) return
+    await this.ingest.apply(msg)
   }
 
   private updateSourceIcon() {

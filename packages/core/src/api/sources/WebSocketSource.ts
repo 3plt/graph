@@ -1,4 +1,4 @@
-import type { IngestMessage } from '../../api/ingest'
+import type { IngestMessage } from '../ingest'
 
 type StatusListener = (status: 'connecting' | 'connected' | 'reconnecting' | 'closed' | 'error', detail?: any) => void
 

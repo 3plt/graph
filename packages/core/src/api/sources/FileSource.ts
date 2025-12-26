@@ -2,6 +2,13 @@ import type { IngestMessage } from '../ingest'
 
 type StatusListener = (status: 'idle' | 'opened' | 'reading' | 'error' | 'closed', detail?: any) => void
 
+export type FileSourceArgs<N, E> = {
+  url: string
+  onMessage: (msg: IngestMessage<N, E>) => void
+  onStatus?: StatusListener
+  intervalMs?: number
+}
+
 export class FileSource<N, E> {
   private url: string
   private onMessage: (msg: IngestMessage<N, E>) => void
@@ -12,11 +19,11 @@ export class FileSource<N, E> {
   private intervalMs: number = 1000
   private closed = false
 
-  constructor(url: string, onMessage: (msg: IngestMessage<N, E>) => void, onStatus?: StatusListener, intervalMs: number = 1000) {
-    this.url = url
-    this.onMessage = onMessage
-    this.onStatus = onStatus
-    this.intervalMs = intervalMs
+  constructor(args: FileSourceArgs<N, E>) {
+    this.url = args.url
+    this.onMessage = args.onMessage
+    this.onStatus = args.onStatus
+    this.intervalMs = args.intervalMs ?? 1000
   }
 
   async connect() {

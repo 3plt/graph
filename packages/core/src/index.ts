@@ -17,5 +17,28 @@ export * from './playground'
 
 // Export API types
 export type { API } from './api/api'
-export type { APIArguments, Update, APIOptions, EventsOptions, IngestionConfig } from './api/options'
+export type {
+  APIArguments,
+  APIOptions,
+  Update,
+  IngestionConfig,
+  EventsOptions,
+  // Callback parameter types
+  NewNode,
+  NewEdge,
+  NodeProps,
+  EdgeProps,
+  PortProps,
+  RenderNode,
+  // Theming types
+  ColorMode,
+  ThemeVars,
+  CanvasTheme,
+  NodeTheme,
+  PortTheme,
+  EdgeTheme,
+} from './api/options'
 export { Updater } from './api/updater'
+
+// Export common types
+export type { Orientation, NodeAlign, PortStyle } from './common'

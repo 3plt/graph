@@ -324,10 +324,18 @@ export class Playground {
 
     if (example.source.type === 'websocket') {
       this.wsUrl = example.source.url
-      this.wsSource = new WebSocketSource(example.source.url, this.handleIngestMessage.bind(this), this.updateWsStatus)
+      this.wsSource = new WebSocketSource({
+        url: example.source.url,
+        onMessage: this.handleIngestMessage.bind(this),
+        onStatus: this.updateWsStatus,
+      })
       this.wsSource.connect()
     } else if (example.source.type === 'file') {
-      this.fileSource = new FileSource(example.source.path, this.handleIngestMessage.bind(this), this.updateFileStatus)
+      this.fileSource = new FileSource({
+        url: example.source.path,
+        onMessage: this.handleIngestMessage.bind(this),
+        onStatus: this.updateFileStatus,
+      })
       this.fileSource.connect()
     }
   }
@@ -775,7 +783,11 @@ export class Playground {
       this.wsSource.disconnect()
     }
 
-    this.wsSource = new WebSocketSource(url, this.handleIngestMessage.bind(this), this.updateWsStatus)
+    this.wsSource = new WebSocketSource({
+      url: url,
+      onMessage: this.handleIngestMessage.bind(this),
+      onStatus: this.updateWsStatus,
+    })
     this.wsSource.connect()
     this.updateSourceModal()
   }
@@ -799,7 +811,11 @@ export class Playground {
 
   private async handleOpenFolder() {
     if (!this.fsSource) {
-      this.fsSource = new FileSystemSource(this.handleIngestMessage.bind(this), this.updateFsStatus)
+      this.fsSource = new FileSystemSource({
+        filename: 'graph.ndjson',
+        onMessage: this.handleIngestMessage.bind(this),
+        onStatus: this.updateFsStatus,
+      })
     }
     this.updateSourceModal()
     await this.fsSource.openDirectory()

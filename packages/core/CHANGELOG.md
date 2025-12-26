@@ -1,5 +1,11 @@
 # @3plate/graph-core
 
+## 0.1.10
+
+### Patch Changes
+
+- Export types from wrapper packages
+
 ## 0.1.9
 
 ### Patch Changes

@@ -1,23 +1,30 @@
 import type { IngestMessage } from '../ingest'
 
-type StatusListener = (status: 'connecting' | 'connected' | 'reconnecting' | 'closed' | 'error', detail?: any) => void
+export type WebSocketStatus = 'connecting' | 'connected' | 'reconnecting' | 'closed' | 'error'
+export type WebSocketStatusListener = (status: WebSocketStatus, detail?: any) => void
+export type WebSocketSourceArgs<N, E> = {
+  url: string
+  onMessage: (msg: IngestMessage<N, E>) => void
+  onStatus?: WebSocketStatusListener
+  reconnectMs?: number
+}
 
 export class WebSocketSource<N, E> {
   private url: string
   private ws: WebSocket | null = null
   private onMessage: (msg: IngestMessage<N, E>) => void
-  private onStatus?: StatusListener
+  private onStatus?: WebSocketStatusListener
   private reconnectMs: number
   private closedByUser = false
   private connectStartTime: number | null = null
   private totalTimeoutMs: number = 10000
   private totalTimeoutTimer: number | null = null
 
-  constructor(url: string, onMessage: (msg: IngestMessage<N, E>) => void, onStatus?: StatusListener, reconnectMs: number = 1500) {
-    this.url = url
-    this.onMessage = onMessage
-    this.onStatus = onStatus
-    this.reconnectMs = reconnectMs
+  constructor(args: WebSocketSourceArgs<N, E>) {
+    this.url = args.url
+    this.onMessage = args.onMessage
+    this.onStatus = args.onStatus
+    this.reconnectMs = args.reconnectMs ?? 1500
   }
 
   connect() {

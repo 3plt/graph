@@ -8,13 +8,37 @@ import {
 } from '../common'
 import { MarkerType } from '../canvas/marker'
 
+/** WebSocket ingestion configuration */
+export type WebSocketIngestionConfig = {
+  type: 'websocket'
+  /** WebSocket URL */
+  url: string
+  /** Reconnect interval in milliseconds */
+  reconnectMs?: number
+  /** Callback when the WebSocket connection is established */
+  onConnect?: () => void
+  /** Callback when the WebSocket connection is closed */
+  onDisconnect?: () => void
+  /** Callback when the WebSocket connection encounters an error */
+  onError?: (error: Error) => void
+}
+
+/** File ingestion configuration */
+export type FileIngestionConfig = {
+  type: 'file'
+  /** File URL */
+  url: string
+  /** Polling interval in milliseconds */
+  intervalMs?: number
+}
+
 /**
  * Ingestion source configuration.
  * Used to connect to an external data source for graph updates.
  */
 export type IngestionConfig =
-  | { type: 'websocket', url: string, reconnectMs?: number }
-  | { type: 'file', url: string, intervalMs?: number }
+  | WebSocketIngestionConfig
+  | FileIngestionConfig
 
 /**
  * Arguments to the API constructor.

@@ -2,6 +2,13 @@ import type { IngestMessage } from '../ingest'
 
 type StatusListener = (status: 'idle' | 'opened' | 'reading' | 'error' | 'closed', detail?: any) => void
 
+export type FileSystemSourceArgs<N, E> = {
+  filename: string
+  onMessage: (msg: IngestMessage<N, E>) => void
+  onStatus?: StatusListener
+  intervalMs?: number
+}
+
 export class FileSystemSource<N, E> {
   private handle: FileSystemFileHandle | null = null
   private onMessage: (msg: IngestMessage<N, E>) => void
@@ -11,11 +18,11 @@ export class FileSystemSource<N, E> {
   private filename: string
   private intervalMs: number
 
-  constructor(onMessage: (msg: IngestMessage<N, E>) => void, onStatus?: StatusListener, filename: string = 'graph.ndjson', intervalMs: number = 1000) {
-    this.onMessage = onMessage
-    this.onStatus = onStatus
-    this.filename = filename
-    this.intervalMs = intervalMs
+  constructor(args: FileSystemSourceArgs<N, E>) {
+    this.filename = args.filename
+    this.onMessage = args.onMessage
+    this.onStatus = args.onStatus
+    this.intervalMs = args.intervalMs ?? 1000
   }
 
   async openDirectory() {

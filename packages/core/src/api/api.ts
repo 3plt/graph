@@ -13,6 +13,7 @@ import { Updater } from './updater'
 import { Ingest, IngestMessage } from './ingest'
 import { WebSocketSource } from './sources/WebSocketSource'
 import { FileSource } from './sources/FileSource'
+import { FileSystemSource } from './sources/FileSystemSource'
 import { logger } from '../log'
 
 const log = logger('api')
@@ -132,30 +133,21 @@ export class API<N, E> {
   private connectIngestion() {
     if (!this.ingestionConfig || !this.ingest) return
 
-    const handleMessage = (msg: IngestMessage<N, E>) => {
-      this.ingest!.apply(msg)
+    const args: any = {
+      ...this.ingestionConfig,
+      onMessage: (msg: IngestMessage<N, E>) => {
+        this.ingest!.apply(msg)
+      },
     }
 
-    switch (this.ingestionConfig.type) {
-      case 'websocket':
-        this.ingestionSource = new WebSocketSource<N, E>(
-          this.ingestionConfig.url,
-          handleMessage,
-          undefined,
-          this.ingestionConfig.reconnectMs
-        )
-        this.ingestionSource.connect()
-        break
-      case 'file':
-        this.ingestionSource = new FileSource<N, E>(
-          this.ingestionConfig.url,
-          handleMessage,
-          undefined,
-          this.ingestionConfig.intervalMs
-        )
-        this.ingestionSource.connect()
-        break
-    }
+    const source = {
+      'websocket': WebSocketSource<N, E>,
+      'file': FileSource<N, E>,
+      'filesystem': FileSystemSource<N, E>,
+    }[this.ingestionConfig.type] as any
+
+    this.ingestionSource = new source[this.ingestionConfig.type](args)
+    this.ingestionSource?.connect()
   }
 
   /** Disconnect from the ingestion source */

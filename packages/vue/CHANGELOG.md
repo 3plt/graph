@@ -1,5 +1,13 @@
 # @3plate/graph-vue
 
+## 0.1.10
+
+### Patch Changes
+
+- Export types from wrapper packages
+- Updated dependencies
+  - @3plate/graph-core@0.1.10
+
 ## 0.1.9
 
 ### Patch Changes

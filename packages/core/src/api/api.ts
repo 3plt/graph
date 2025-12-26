@@ -4,7 +4,7 @@ import { EdgeId, PublicEdgeData } from '../graph/edge'
 import { SegId } from '../graph/seg'
 import { Mutator } from '../graph/mutator'
 import { MarkerType } from '../canvas/marker'
-import { APIArguments, Update, NodeProps, EdgeProps, EdgeEnd, EventsOptions, NewNode, NewEdge, ThemeVars, IngestionConfig } from './options'
+import { APIArguments, APIOptions, Update, NodeProps, EdgeProps, EdgeEnd, EventsOptions, NewNode, NewEdge, ThemeVars, IngestionConfig } from './options'
 import { Defaults, applyDefaults } from './defaults'
 import { PublicNodeData, NodeId, PortId } from '../graph/node'
 import { Node } from '../canvas/node'
@@ -53,6 +53,7 @@ export class API<N, E> {
   private ingest?: Ingest<N, E>
   private ingestionSource?: WebSocketSource<N, E> | FileSource<N, E>
   private ingestionConfig?: IngestionConfig
+  private prevProps: { nodes?: N[], edges?: E[], history?: Update<N, E>[], options?: APIOptions<N, E> } = {}
   root: string
 
   constructor(args: APIArguments<N, E>) {
@@ -78,6 +79,14 @@ export class API<N, E> {
       this.history = [Updater.add(args.nodes, args.edges || []).update]
     } else {
       this.history = []
+    }
+
+    // Store initial props for applyProps diffing
+    this.prevProps = {
+      nodes: args.nodes,
+      edges: args.edges,
+      history: args.history,
+      options: args.options,
     }
 
     // setup ingestion if configured
@@ -697,9 +706,143 @@ export class API<N, E> {
     this.canvas?.setColorMode(colorMode)
   }
 
+  /**
+   * Apply prop changes by diffing against previously applied props.
+   * This is a convenience method for framework wrappers that centralizes
+   * the logic for detecting and applying changes to nodes, edges, history, and options.
+   * The API stores the previous props internally, so you just pass the new props.
+   *
+   * @param props - The new props to apply
+   */
+  applyProps(props: { nodes?: N[], edges?: E[], history?: Update<N, E>[], options?: APIOptions<N, E> }): void {
+    const prev = this.prevProps
+
+    // Check if nodes/edges changed
+    const nodesChanged = !shallowEqualArray(props.nodes, prev.nodes)
+    const edgesChanged = !shallowEqualArray(props.edges, prev.edges)
+
+    if (nodesChanged || edgesChanged) {
+      if (props.nodes) {
+        this.replaceSnapshot(props.nodes, props.edges || [], undefined)
+      }
+      this.prevProps = { ...prev, nodes: props.nodes, edges: props.edges }
+      return
+    }
+
+    // Check if history changed
+    if (props.history !== prev.history) {
+      if (props.history === undefined) {
+        // History was removed - if we have nodes/edges, use those
+        if (props.nodes) {
+          this.replaceSnapshot(props.nodes, props.edges || [], undefined)
+        }
+        this.prevProps = { ...prev, history: props.history }
+        return
+      }
+
+      // Check if history was appended or completely replaced
+      if (prev.history && isHistoryPrefix(prev.history, props.history)) {
+        // History was appended - apply only the new frames
+        const prevLength = prev.history.length
+        const newFrames = props.history.slice(prevLength)
+        for (const frame of newFrames) {
+          this.update(u => {
+            if (frame.addNodes) u.addNodes(...frame.addNodes)
+            if (frame.removeNodes) u.deleteNodes(...frame.removeNodes)
+            if (frame.updateNodes) u.updateNodes(...frame.updateNodes)
+            if (frame.addEdges) u.addEdges(...frame.addEdges)
+            if (frame.removeEdges) u.deleteEdges(...frame.removeEdges)
+            if (frame.updateEdges) u.updateEdges(...frame.updateEdges)
+            if (frame.description) u.describe(frame.description)
+          })
+        }
+      } else {
+        // History was completely replaced
+        this.replaceHistory(props.history)
+      }
+      this.prevProps = { ...prev, history: props.history }
+      return
+    }
+
+    // Check if canvas options changed
+    const prevCanvas = prev.options?.canvas as any
+    const currCanvas = props.options?.canvas as any
+
+    // Handle color mode changes
+    const colorModeChanged = prevCanvas?.colorMode !== currCanvas?.colorMode
+    if (colorModeChanged && currCanvas?.colorMode) {
+      this.setColorMode(currCanvas.colorMode)
+    }
+
+    // Handle theme/type style changes
+    const themeChanged = prevCanvas?.theme !== currCanvas?.theme
+    const nodeTypesChanged = prevCanvas?.nodeTypes !== currCanvas?.nodeTypes
+    const edgeTypesChanged = prevCanvas?.edgeTypes !== currCanvas?.edgeTypes
+
+    if (themeChanged || nodeTypesChanged || edgeTypesChanged) {
+      this.updateStyles({
+        theme: currCanvas?.theme,
+        nodeTypes: currCanvas?.nodeTypes,
+        edgeTypes: currCanvas?.edgeTypes,
+      })
+    }
+
+    if (props.options !== prev.options) {
+      this.prevProps = { ...prev, options: props.options }
+    }
+  }
+
   /** Cleanup resources when the graph is destroyed */
   destroy() {
     this.disconnectIngestion()
     this.canvas?.destroy()
   }
+}
+
+/** Shallow comparison of arrays with object property comparison */
+function shallowEqualArray<T>(a: T[] | undefined, b: T[] | undefined): boolean {
+  if (a === b) return true
+  if (!a || !b) return false
+  if (a.length !== b.length) return false
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) {
+      if (typeof a[i] === 'object' && a[i] !== null && typeof b[i] === 'object' && b[i] !== null) {
+        const aObj = a[i] as any
+        const bObj = b[i] as any
+        const aKeys = Object.keys(aObj)
+        const bKeys = Object.keys(bObj)
+        if (aKeys.length !== bKeys.length) return false
+        for (const key of aKeys) {
+          if (aObj[key] !== bObj[key]) return false
+        }
+      } else {
+        return false
+      }
+    }
+  }
+  return true
+}
+
+/** Check if oldHistory is a prefix of newHistory */
+function isHistoryPrefix<N, E>(oldHistory: Update<N, E>[], newHistory: Update<N, E>[]): boolean {
+  if (newHistory.length < oldHistory.length) return false
+  for (let i = 0; i < oldHistory.length; i++) {
+    if (!shallowEqualUpdate(oldHistory[i], newHistory[i])) {
+      return false
+    }
+  }
+  return true
+}
+
+/** Shallow comparison of Update objects */
+function shallowEqualUpdate<N, E>(a: Update<N, E>, b: Update<N, E>): boolean {
+  if (a === b) return true
+  if (a.description !== b.description) return false
+  if (!shallowEqualArray(a.addNodes, b.addNodes)) return false
+  if (!shallowEqualArray(a.removeNodes, b.removeNodes)) return false
+  if (!shallowEqualArray(a.updateNodes, b.updateNodes)) return false
+  if (!shallowEqualArray(a.addEdges, b.addEdges)) return false
+  if (!shallowEqualArray(a.removeEdges, b.removeEdges)) return false
+  if (!shallowEqualArray(a.updateEdges, b.updateEdges)) return false
+  return true
 }

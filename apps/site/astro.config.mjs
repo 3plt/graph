@@ -36,6 +36,7 @@ export default defineConfig({
       alias: {
         '@3plate/graph-core': path.resolve(path.dirname(new URL(import.meta.url).pathname), '../../packages/core/src/index.ts'),
         '@3plate/graph-react': path.resolve(path.dirname(new URL(import.meta.url).pathname), '../../packages/react/src/index.ts'),
+        '@3plate/graph-vue': path.resolve(path.dirname(new URL(import.meta.url).pathname), '../../packages/vue/src/index.ts'),
       },
     },
   },

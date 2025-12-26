@@ -2,6 +2,7 @@
 import { examples, exampleList } from '../examples';
 import { generateVueCode } from '../examples/codegen';
 import Code from './Code.astro';
+import VueDemoComponent from './VueDemoComponent.vue';
 
 const defaultExample = examples.diamond;
 const defaultCode = generateVueCode(defaultExample);
@@ -33,15 +34,14 @@ const defaultCode = generateVueCode(defaultExample);
     </div>
   </div>
 
-  <div class="placeholder">
-    <p>Vue wrapper coming soon!</p>
-    <code>npm install @3plate/graph-vue</code>
+  <div class="graph-container" id="vue-graph-container">
+    <VueDemoComponent client:load example={defaultExample} colorMode="system" />
   </div>
 
   <div class="code-example">
     <h4>Code</h4>
     <div id="vue-code-display">
-      <Code code={defaultCode} lang="typescript" />
+      <Code code={defaultCode} lang="vue" />
     </div>
   </div>
 </div>
@@ -82,26 +82,13 @@ const defaultCode = generateVueCode(defaultExample);
     cursor: pointer;
   }
 
-  .placeholder {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 200px;
-    gap: 1rem;
-    background: var(--color-bg-secondary);
+  .graph-container {
+    width: 100%;
+    height: 350px;
+    border: 1px solid var(--color-border);
     border-radius: 0.5rem;
     margin: 1rem 0;
-  }
-
-  .placeholder p {
-    font-size: 1.25rem;
-    color: var(--color-text-muted);
-  }
-
-  .placeholder code {
-    font-size: 1rem;
-    padding: 0.5rem 1rem;
+    overflow: hidden;
   }
 
   .code-example h4 {
@@ -130,28 +117,72 @@ const defaultCode = generateVueCode(defaultExample);
   import { examples } from '../examples';
   import { generateVueCode } from '../examples/codegen';
   import { highlightCode } from '../utils/highlighter';
-  import { setColorMode, syncColorModeSelects, type ColorMode } from '../utils/demoState';
+  import { getResolvedColorMode, setColorMode, onColorModeChange, syncColorModeSelects, type ColorMode } from '../utils/demoState';
 
+  let currentExampleKey = 'diamond';
+  let currentColorMode: ColorMode = 'system';
+
+  async function renderExample(exampleKey: string, colorMode: ColorMode) {
+    const container = document.getElementById('vue-graph-container');
+    const codeDisplay = document.getElementById('vue-code-display');
+    if (!container) return;
+
+    const example = examples[exampleKey];
+    if (!example) return;
+
+    // Update code display with syntax highlighting
+    if (codeDisplay) {
+      const code = generateVueCode(example);
+      const highlighted = await highlightCode(code, 'vue');
+      codeDisplay.innerHTML = `<div class="code-block">${highlighted}</div>`;
+    }
+
+    // Update Vue component by dispatching a custom event
+    const event = new CustomEvent('demo-update', {
+      detail: { example, colorMode: getResolvedColorMode() }
+    });
+    container.dispatchEvent(event);
+
+    // Also update data attributes as fallback
+    container.setAttribute('data-example-key', exampleKey);
+    container.setAttribute('data-color-mode', colorMode);
+  }
+
+  // Initialize
   document.addEventListener('DOMContentLoaded', () => {
     const select = document.getElementById('vue-example-select') as HTMLSelectElement;
-    const codeDisplay = document.getElementById('vue-code-display');
+    const vueTab = document.querySelector('[data-tab="vue"]');
+    const vuePanel = document.querySelector('[data-panel="vue"]');
     const colorModeSelect = document.getElementById('vue-color-mode') as HTMLSelectElement;
 
-    if (select && codeDisplay) {
-      select.addEventListener('change', async () => {
-        const example = examples[select.value];
-        if (example) {
-          const code = generateVueCode(example);
-          const highlighted = await highlightCode(code, 'vue');
-          codeDisplay.innerHTML = `<div class="code-block">${highlighted}</div>`;
-        }
+    if (select) {
+      select.addEventListener('change', () => {
+        currentExampleKey = select.value;
+        renderExample(currentExampleKey, currentColorMode);
       });
     }
 
     if (colorModeSelect) {
       colorModeSelect.addEventListener('change', () => {
-        setColorMode(colorModeSelect.value as ColorMode);
+        currentColorMode = colorModeSelect.value as ColorMode;
+        setColorMode(currentColorMode);
         syncColorModeSelects();
+        renderExample(currentExampleKey, currentColorMode);
+      });
+    }
+
+    // Listen for color mode changes from other demos
+    onColorModeChange(() => {
+      renderExample(currentExampleKey, getResolvedColorMode() as ColorMode);
+    });
+
+    if (vueTab && vuePanel) {
+      if (vuePanel.classList.contains('active')) {
+        renderExample('diamond', getResolvedColorMode() as ColorMode);
+      }
+
+      vueTab.addEventListener('click', () => {
+        setTimeout(() => renderExample(currentExampleKey || 'diamond', getResolvedColorMode() as ColorMode), 100);
       });
     }
   });

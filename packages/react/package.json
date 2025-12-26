@@ -1,15 +1,23 @@
 {
   "name": "@3plate/graph-react",
-  "version": "0.1.10",
+  "version": "0.1.11",
+  "type": "module",
   "license": "GPL-3.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/3plt/graph",
     "directory": "packages/react"
   },
-  "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
   "files": [
     "dist"
   ],

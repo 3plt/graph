@@ -1,5 +1,11 @@
 # @3plate/graph-core
 
+## 0.1.11
+
+### Patch Changes
+
+- Build all packages as modules
+
 ## 0.1.10
 
 ### Patch Changes

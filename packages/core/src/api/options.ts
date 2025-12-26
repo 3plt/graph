@@ -7,6 +7,8 @@ import {
   PortStyle,
 } from '../common'
 import { MarkerType } from '../canvas/marker'
+import type { WebSocketStatusListener } from './sources/WebSocketSource'
+import type { FileStatusListener } from './sources/FileSource'
 
 /** WebSocket ingestion configuration */
 export type WebSocketIngestionConfig = {
@@ -15,12 +17,8 @@ export type WebSocketIngestionConfig = {
   url: string
   /** Reconnect interval in milliseconds */
   reconnectMs?: number
-  /** Callback when the WebSocket connection is established */
-  onConnect?: () => void
-  /** Callback when the WebSocket connection is closed */
-  onDisconnect?: () => void
-  /** Callback when the WebSocket connection encounters an error */
-  onError?: (error: Error) => void
+  /** Status listener */
+  onStatus?: WebSocketStatusListener
 }
 
 /** File ingestion configuration */
@@ -30,6 +28,8 @@ export type FileIngestionConfig = {
   url: string
   /** Polling interval in milliseconds */
   intervalMs?: number
+  /** Status listener */
+  onStatus?: FileStatusListener
 }
 
 /**

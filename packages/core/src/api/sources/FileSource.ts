@@ -1,18 +1,18 @@
 import type { IngestMessage } from '../ingest'
 
-type StatusListener = (status: 'idle' | 'opened' | 'reading' | 'error' | 'closed', detail?: any) => void
-
+export type FileStatus = 'idle' | 'opened' | 'reading' | 'error' | 'closed'
+export type FileStatusListener = (status: FileStatus, detail?: any) => void
 export type FileSourceArgs<N, E> = {
   url: string
   onMessage: (msg: IngestMessage<N, E>) => void
-  onStatus?: StatusListener
+  onStatus?: FileStatusListener
   intervalMs?: number
 }
 
 export class FileSource<N, E> {
   private url: string
   private onMessage: (msg: IngestMessage<N, E>) => void
-  private onStatus?: StatusListener
+  private onStatus?: FileStatusListener
   private timer: number | null = null
   private lastETag: string | null = null
   private lastContent: string = ''

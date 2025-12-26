@@ -1,6 +1,6 @@
 {
   "name": "@3plate/graph-core",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "type": "module",
   "license": "GPL-3.0",
   "repository": {
@@ -8,13 +8,15 @@
     "url": "https://github.com/3plt/graph",
     "directory": "packages/core"
   },
-  "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "source": "./src/index.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
     }
   },
   "files": [

@@ -1,5 +1,15 @@
 # @3plate/graph
 
+## 0.1.9
+
+### Patch Changes
+
+- Updated dependencies
+  - @3plate/graph-angular@0.1.9
+  - @3plate/graph-core@0.1.9
+  - @3plate/graph-react@0.1.9
+  - @3plate/graph-vue@0.1.9
+
 ## 0.1.8
 
 ### Patch Changes

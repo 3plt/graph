@@ -725,23 +725,16 @@ export class API<N, E> {
       if (props.nodes) {
         this.replaceSnapshot(props.nodes, props.edges || [], undefined)
       }
-      this.prevProps = { ...prev, nodes: props.nodes, edges: props.edges }
-      return
     }
 
-    // Check if history changed
-    if (props.history !== prev.history) {
+    // Check if history changed (only if nodes/edges didn't change)
+    if (!nodesChanged && !edgesChanged && props.history !== prev.history) {
       if (props.history === undefined) {
         // History was removed - if we have nodes/edges, use those
         if (props.nodes) {
           this.replaceSnapshot(props.nodes, props.edges || [], undefined)
         }
-        this.prevProps = { ...prev, history: props.history }
-        return
-      }
-
-      // Check if history was appended or completely replaced
-      if (prev.history && isHistoryPrefix(prev.history, props.history)) {
+      } else if (prev.history && isHistoryPrefix(prev.history, props.history)) {
         // History was appended - apply only the new frames
         const prevLength = prev.history.length
         const newFrames = props.history.slice(prevLength)
@@ -760,8 +753,6 @@ export class API<N, E> {
         // History was completely replaced
         this.replaceHistory(props.history)
       }
-      this.prevProps = { ...prev, history: props.history }
-      return
     }
 
     // Check if canvas options changed
@@ -787,8 +778,12 @@ export class API<N, E> {
       })
     }
 
-    if (props.options !== prev.options) {
-      this.prevProps = { ...prev, options: props.options }
+    // Update prevProps with all changed values
+    this.prevProps = {
+      nodes: props.nodes,
+      edges: props.edges,
+      history: props.history,
+      options: props.options,
     }
   }
 

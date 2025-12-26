@@ -22,20 +22,7 @@ const defaultCode = generateAngularCode(defaultExample);
           ))}
         </select>
       </div>
-      <div class="control-group">
-        <label for="angular-color-mode">Theme:</label>
-        <select id="angular-color-mode" data-color-mode-select>
-          <option value="system">System</option>
-          <option value="light">Light</option>
-          <option value="dark">Dark</option>
-        </select>
-      </div>
     </div>
-  </div>
-
-  <div class="placeholder">
-    <p>Angular wrapper coming soon!</p>
-    <code>npm install @3plate/graph-angular</code>
   </div>
 
   <div class="code-example">
@@ -82,28 +69,6 @@ const defaultCode = generateAngularCode(defaultExample);
     cursor: pointer;
   }
 
-  .placeholder {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 200px;
-    gap: 1rem;
-    background: var(--color-bg-secondary);
-    border-radius: 0.5rem;
-    margin: 1rem 0;
-  }
-
-  .placeholder p {
-    font-size: 1.25rem;
-    color: var(--color-text-muted);
-  }
-
-  .placeholder code {
-    font-size: 1rem;
-    padding: 0.5rem 1rem;
-  }
-
   .code-example h4 {
     margin-bottom: 0.5rem;
     font-size: 0.875rem;
@@ -130,12 +95,10 @@ const defaultCode = generateAngularCode(defaultExample);
   import { examples } from '../examples';
   import { generateAngularCode } from '../examples/codegen';
   import { highlightCode } from '../utils/highlighter';
-  import { setColorMode, syncColorModeSelects, type ColorMode } from '../utils/demoState';
 
   document.addEventListener('DOMContentLoaded', () => {
     const select = document.getElementById('angular-example-select') as HTMLSelectElement;
     const codeDisplay = document.getElementById('angular-code-display');
-    const colorModeSelect = document.getElementById('angular-color-mode') as HTMLSelectElement;
 
     if (select && codeDisplay) {
       select.addEventListener('change', async () => {
@@ -145,13 +108,6 @@ const defaultCode = generateAngularCode(defaultExample);
           const highlighted = await highlightCode(code, 'angular');
           codeDisplay.innerHTML = `<div class="code-block">${highlighted}</div>`;
         }
-      });
-    }
-
-    if (colorModeSelect) {
-      colorModeSelect.addEventListener('change', () => {
-        setColorMode(colorModeSelect.value as ColorMode);
-        syncColorModeSelects();
       });
     }
   });

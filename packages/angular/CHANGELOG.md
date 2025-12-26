@@ -1,5 +1,13 @@
 # @3plate/graph-angular
 
+## 0.1.9
+
+### Patch Changes
+
+- Add react, vue, angular wrappers
+- Updated dependencies
+  - @3plate/graph-core@0.1.9
+
 ## 0.1.8
 
 ### Patch Changes

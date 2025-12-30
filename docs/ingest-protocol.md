@@ -25,9 +25,9 @@ Messages are JSON (or NDJSON one per line). Three forms:
 
 ## History
 ```json
-{"type":"history","frames":[ { "addNodes":[...], "addEdges":[...] }, { "updateNodes":[...] } ]}
+{"type":"history","history":[ { "addNodes":[...], "addEdges":[...] }, { "updateNodes":[...] } ]}
 ```
-- Replaces the full history with the provided frames.
+- Replaces the full history with the provided history.
 
 ## Transport Options
 - WebSocket: send each message as a line.

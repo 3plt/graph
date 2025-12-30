@@ -15,7 +15,7 @@ export type UpdateMessage<N, E> = {
 
 export type HistoryMessage<N, E> = {
   type: 'history'
-  frames: Update<N, E>[]
+  history: Update<N, E>[]
 }
 
 export type IngestMessage<N, E> =
@@ -34,7 +34,7 @@ export class Ingest<N, E> {
    * Apply an incoming ingest message to the API.
    * - snapshot: rebuild state from nodes/edges (clears prior history)
    * - update: apply incremental update
-   * - history: initialize from a set of frames (clears prior history)
+   * - history: initialize from a set of updates (clears prior history)
    */
   async apply(msg: IngestMessage<N, E>): Promise<void> {
     switch (msg.type) {
@@ -55,7 +55,7 @@ export class Ingest<N, E> {
         break
       }
       case 'history': {
-        await this.api.replaceHistory(msg.frames)
+        await this.api.replaceHistory(msg.history)
         break
       }
     }

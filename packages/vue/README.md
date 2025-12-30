@@ -159,14 +159,14 @@ function addNode() {
 
 ## Props
 
-| Prop | Type | Description |
-|------|------|-------------|
-| `nodes` | `N[]` | Array of node objects |
-| `edges` | `E[]` | Array of edge objects |
-| `history` | `Update<N, E>[]` | History frames for time-travel |
+| Prop        | Type              | Description                     |
+|-------------|-------------------|---------------------------------|
+| `nodes`     | `N[]`             | Array of node objects           |
+| `edges`     | `E[]`             | Array of edge objects           |
+| `history`   | `Update<N, E>[]`  | History updates for time-travel |
 | `ingestion` | `IngestionConfig` | WebSocket or file source config |
-| `options` | `APIOptions` | Graph and canvas options |
-| `events` | `EventsOptions` | Event handlers |
+| `options`   | `APIOptions`      | Graph and canvas options        |
+| `events`    | `EventsOptions`   | Event handlers                  |
 
 ### Playground Component
 
@@ -215,7 +215,7 @@ const examples = {
 ## Features
 
 - **Reactive updates** — Props changes are efficiently diffed and applied
-- **Incremental history** — Appended history frames are applied incrementally
+- **Incremental history** — Appended history updates are applied incrementally
 - **Style updates** — Theme and type changes are applied without re-render
 - **Color mode** — Light/dark mode changes are applied instantly
 - **Cleanup** — Resources are properly cleaned up on unmount

@@ -183,9 +183,9 @@ export class API<N, E> {
   }
 
   /** Replace entire history (clears prior) */
-  async replaceHistory(frames: Update<N, E>[]) {
+  async replaceHistory(history: Update<N, E>[]) {
     this.reset()
-    this.history = frames
+    this.history = history
     await this.applyHistory()
   }
 
@@ -727,10 +727,10 @@ export class API<N, E> {
           this.replaceSnapshot(props.nodes, props.edges || [], undefined)
         }
       } else if (prev.history && isHistoryPrefix(prev.history, props.history)) {
-        // History was appended - apply only the new frames
+        // History was appended - apply only the new updates
         const prevLength = prev.history.length
-        const newFrames = props.history.slice(prevLength)
-        for (const frame of newFrames) {
+        const newUpdates = props.history.slice(prevLength)
+        for (const frame of newUpdates) {
           this.update(u => {
             if (frame.addNodes) u.addNodes(...frame.addNodes)
             if (frame.removeNodes) u.deleteNodes(...frame.removeNodes)

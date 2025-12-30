@@ -1,5 +1,11 @@
 # @3plate/graph-core
 
+## 0.1.12
+
+### Patch Changes
+
+- Update ingestion format
+
 ## 0.1.11
 
 ### Patch Changes

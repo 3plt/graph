@@ -108,12 +108,12 @@ function App() {
 
 ## Packages
 
-| Package | Description |
-|---------|-------------|
-| [@3plate/graph-core](./packages/core/README.md) | Framework-agnostic core library |
-| [@3plate/graph-react](./packages/react/README.md) | React components and hooks |
-| [@3plate/graph-vue](./packages/vue/README.md) | Vue 3 components |
-| [@3plate/graph-angular](./packages/angular/README.md) | Angular components |
+| Package                                               | Description                     |
+|-------------------------------------------------------|---------------------------------|
+| [@3plate/graph-core](./packages/core/README.md)       | Framework-agnostic core library |
+| [@3plate/graph-react](./packages/react/README.md)     | React components and hooks      |
+| [@3plate/graph-vue](./packages/vue/README.md)         | Vue 3 components                |
+| [@3plate/graph-angular](./packages/angular/README.md) | Angular components              |
 
 ## Configuration
 
@@ -259,7 +259,7 @@ api.update(u => {
 
 // Bulk operations
 api.replaceSnapshot(nodes, edges)
-api.replaceHistory(frames)
+api.replaceHistory(history)
 
 // Theming
 api.setColorMode('dark')

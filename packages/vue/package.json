@@ -1,6 +1,6 @@
 {
   "name": "@3plate/graph-vue",
-  "version": "0.1.12",
+  "version": "0.1.13",
   "type": "module",
   "license": "GPL-3.0",
   "repository": {
@@ -31,8 +31,8 @@
     "@3plate/graph-core": "workspace:*"
   },
   "scripts": {
-    "build": "tsup src/index.ts --format cjs,esm --dts --external vue",
-    "dev": "tsup src/index.ts --format cjs,esm --dts --watch --external vue"
+    "build": "tsup src/index.ts --format cjs,esm --dts --sourcemap --external vue",
+    "dev": "tsup src/index.ts --format cjs,esm --dts --sourcemap --watch --external vue"
   },
   "devDependencies": {
     "tsup": "^8.5.1",

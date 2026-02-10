@@ -1,5 +1,11 @@
 # @3plate/graph-core
 
+## 0.1.13
+
+### Patch Changes
+
+- Add source maps to all packages
+
 ## 0.1.12
 
 ### Patch Changes

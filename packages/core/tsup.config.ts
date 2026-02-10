@@ -5,6 +5,7 @@ export default defineConfig({
   entry: ['src/index.ts'],
   format: ['cjs', 'esm'],
   dts: true,
+  sourcemap: true,
   // Mark CSS imports as external so DTS build doesn't try to resolve them
   external: [/\.css\?raw$/],
   loader: {

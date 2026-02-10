@@ -1,5 +1,13 @@
 # @3plate/graph-angular
 
+## 0.1.13
+
+### Patch Changes
+
+- Add source maps to all packages
+- Updated dependencies
+  - @3plate/graph-core@0.1.13
+
 ## 0.1.12
 
 ### Patch Changes

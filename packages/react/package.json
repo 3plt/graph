@@ -1,6 +1,6 @@
 {
   "name": "@3plate/graph-react",
-  "version": "0.1.13",
+  "version": "0.1.14",
   "type": "module",
   "license": "GPL-3.0",
   "repository": {
@@ -32,8 +32,8 @@
     "@3plate/graph-core": "workspace:*"
   },
   "scripts": {
-    "build": "tsup src/index.ts --format cjs,esm --dts --external react --external react-dom",
-    "dev": "tsup src/index.ts --format cjs,esm --dts --watch --external react --external react-dom",
+    "build": "tsup src/index.ts --format cjs,esm --dts --sourcemap --external react --external react-dom",
+    "dev": "tsup src/index.ts --format cjs,esm --dts --sourcemap --watch --external react --external react-dom",
     "test": "vitest run",
     "test:watch": "vitest"
   },

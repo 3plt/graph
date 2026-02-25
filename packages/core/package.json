@@ -1,6 +1,6 @@
 {
   "name": "@3plate/graph-core",
-  "version": "0.1.13",
+  "version": "0.1.14",
   "type": "module",
   "license": "GPL-3.0",
   "repository": {
@@ -33,6 +33,7 @@
     "test:watch": "vitest"
   },
   "devDependencies": {
+    "@types/node": "^22.10.1",
     "tsup": "^8.5.1",
     "typescript": "^5.9.3",
     "vitest": "^2.1.8"

@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import { defineConfig } from 'tsup'
 import path from 'path'
 
@@ -5,7 +6,7 @@ export default defineConfig({
   entry: ['src/index.ts'],
   format: ['cjs', 'esm'],
   dts: true,
-  // Bundle CSS as raw text so dist is self-contained; consumers don't need a Vite config
+  sourcemap: true,
   loader: {
     '.css': 'text',
   },

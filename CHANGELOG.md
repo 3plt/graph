@@ -1,13 +1,23 @@
 # @3plate/graph
 
+## 0.1.14
+
+### Patch Changes
+
+- Updated dependencies
+  - @3plate/graph-core@0.1.14
+  - @3plate/graph-angular@0.1.14
+  - @3plate/graph-react@0.1.14
+  - @3plate/graph-vue@0.1.14
+
 ## 0.1.13
 
 ### Patch Changes
 
 - Updated dependencies
-  - @3plate/graph-core@0.1.13
   - @3plate/graph-angular@0.1.13
   - @3plate/graph-react@0.1.13
+  - @3plate/graph-core@0.1.13
   - @3plate/graph-vue@0.1.13
 
 ## 0.1.12

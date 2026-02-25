@@ -1,10 +1,16 @@
 # @3plate/graph-core
 
+## 0.1.14
+
+### Patch Changes
+
+- Ensure css files are in dist
+
 ## 0.1.13
 
 ### Patch Changes
 
-- Make sure built CSS is packaged
+- Add source maps to all packages
 
 ## 0.1.12
 

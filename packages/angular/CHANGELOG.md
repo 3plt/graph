@@ -1,5 +1,12 @@
 # @3plate/graph-angular
 
+## 0.1.15
+
+### Patch Changes
+
+- Updated dependencies
+  - @3plate/graph-core@0.1.15
+
 ## 0.1.14
 
 ### Patch Changes

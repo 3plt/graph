@@ -1,6 +1,7 @@
 /// <reference types="node" />
-import { defineConfig } from 'tsup'
+import fs from 'node:fs'
 import path from 'path'
+import { defineConfig } from 'tsup'
 
 export default defineConfig({
   entry: ['src/index.ts'],
@@ -9,6 +10,12 @@ export default defineConfig({
   sourcemap: true,
   loader: {
     '.css': 'text',
+  },
+  onSuccess: async () => {
+    // Add .js to jsx-dom import so Node ESM resolution works (consumers don't need vite.ssr.noExternal)
+    const esmPath = path.join(process.cwd(), 'dist', 'index.js')
+    const code = fs.readFileSync(esmPath, 'utf8')
+    fs.writeFileSync(esmPath, code.replace(/from "jsx-dom\/jsx-runtime"/g, 'from "jsx-dom/jsx-runtime.js"'))
   },
   esbuildPlugins: [
     {

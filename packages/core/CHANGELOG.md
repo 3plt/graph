@@ -1,5 +1,11 @@
 # @3plate/graph-core
 
+## 0.1.15
+
+### Patch Changes
+
+- Resolve NodeJS ESM module issue
+
 ## 0.1.14
 
 ### Patch Changes

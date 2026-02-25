@@ -1,5 +1,11 @@
 # @3plate/graph-core
 
+## 0.1.13
+
+### Patch Changes
+
+- Make sure built CSS is packaged
+
 ## 0.1.12
 
 ### Patch Changes

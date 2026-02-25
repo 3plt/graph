@@ -5,8 +5,7 @@ export default defineConfig({
   entry: ['src/index.ts'],
   format: ['cjs', 'esm'],
   dts: true,
-  // Mark CSS imports as external so DTS build doesn't try to resolve them
-  external: [/\.css\?raw$/],
+  // Bundle CSS as raw text so dist is self-contained; consumers don't need a Vite config
   loader: {
     '.css': 'text',
   },

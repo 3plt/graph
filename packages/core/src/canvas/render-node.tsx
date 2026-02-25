@@ -6,8 +6,6 @@ export function renderNode(node: any, props?: NodeProps<any>): HTMLElement {
   const title = node?.title ?? props?.title ?? node?.label ?? node?.name ?? node?.text ?? props?.text ?? node?.id ?? '?'
   const detail = node?.detail ?? node?.description ?? node?.subtitle
 
-  console.log(`renderNode: ${node.id} ${title} ${detail}`)
-
   return (
     <div className="g3p-node-default">
       <div className="g3p-node-title">{title}</div>

@@ -1,6 +1,6 @@
 {
   "name": "@3plate/graph-core",
-  "version": "0.1.12",
+  "version": "0.1.13",
   "type": "module",
   "license": "GPL-3.0",
   "repository": {
@@ -28,6 +28,7 @@
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
+    "prepublishOnly": "pnpm run build",
     "test": "vitest run",
     "test:watch": "vitest"
   },

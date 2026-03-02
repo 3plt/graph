@@ -140,6 +140,13 @@ export type EventsOptions<N, E> = {
 /** Function to render a node */
 export type RenderNode<N> = (node: N, props?: NodeProps<N>) => HTMLElement
 
+/**
+ * Function called after a node element has been mounted to the DOM.
+ * Use this to integrate framework-specific rendering (e.g. React, Vue) into node content.
+ * The returned function, if any, is called when the node is removed.
+ */
+export type MountNode<N> = (node: N, element: HTMLElement) => (() => void) | void
+
 /** Color mode */
 export type ColorMode = 'light' | 'dark' | 'system'
 
@@ -198,6 +205,12 @@ export type CanvasOptions<N> = {
   panZoom?: boolean
   /** Function to render a node */
   renderNode?: RenderNode<N>
+  /**
+   * Called after a node element is mounted to the DOM.
+   * Use this to integrate framework renderers (React, Vue, etc.) into node content.
+   * Return a cleanup function to be called when the node is removed.
+   */
+  mountNode?: MountNode<N>
   /** Color mode */
   colorMode?: ColorMode
   /** Theme */

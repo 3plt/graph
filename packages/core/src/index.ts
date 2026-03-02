@@ -20,6 +20,7 @@ export type { API } from './api/api'
 export type {
   APIArguments,
   APIOptions,
+  CanvasOptions,
   Update,
   IngestionConfig,
   EventsOptions,
@@ -30,6 +31,7 @@ export type {
   EdgeProps,
   PortProps,
   RenderNode,
+  MountNode,
   // Theming types
   ColorMode,
   ThemeVars,

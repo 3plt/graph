@@ -11,7 +11,8 @@ import {
 
 export type Defaults<N, E> = {
   graph: Required<GraphOptions>
-  canvas: Required<CanvasOptions<N>>
+  // mountNode has no sensible default so it is kept optional
+  canvas: Required<Omit<CanvasOptions<N>, 'mountNode'>>
   props: PropsOptions<N, E>
 }
 

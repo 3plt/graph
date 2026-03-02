@@ -7,6 +7,8 @@ export class Node {
   hovered: boolean
   container!: SVGElement
   content!: HTMLElement
+  innerContent?: HTMLElement
+  cleanup?: () => void
   canvas: Canvas<any, any>
   data: PublicNodeData
   isDummy: boolean
@@ -23,11 +25,14 @@ export class Node {
       const size = canvas.dummyNodeSize
     } else {
       const render = data!.render ?? canvas.renderNode
-      this.content = this.renderContent(render(data!.data, data!))
+      const innerEl = render(data!.data, data!)
+      this.innerContent = innerEl
+      this.content = this.renderContent(innerEl)
     }
   }
 
   remove() {
+    this.cleanup?.()
     this.container.remove()
   }
 

@@ -2,7 +2,7 @@ import { Pos, Orientation, ScreenPos, CanvasPos, GraphPos, screenPos, canvasPos,
 import { Node } from './node'
 import { Seg } from './seg'
 import { Graph } from '../graph/graph'
-import { CanvasOptions, RenderNode, ThemeVars, NewEdge, NewNode } from '../api/options'
+import { CanvasOptions, RenderNode, MountNode, ThemeVars, NewEdge, NewNode } from '../api/options'
 import { NodeId, NodeKey, PublicNodeData, PortId, Node as GraphNode } from '../graph/node'
 import { SegId, Seg as GraphSeg } from '../graph/seg'
 import { logger } from '../log'
@@ -27,10 +27,11 @@ type Bounds = {
   max: Pos
 }
 
-type CanvasData<N, E> = Required<CanvasOptions<N>> & {
+type CanvasData<N, E> = Required<Omit<CanvasOptions<N>, 'mountNode'>> & {
   renderNode: RenderNode<N>
   dummyNodeSize: number
   orientation: Orientation
+  mountNode?: MountNode<N>
 }
 
 export interface Canvas<N, E> extends CanvasData<N, E> { }
@@ -186,6 +187,13 @@ export class Canvas<N, E> {
       const node = new Node(this, data)
       newNodes.set(data.data, node)
       this.measurement!.appendChild(node.content)
+    }
+    if (this.mountNode) {
+      for (const node of newNodes.values()) {
+        if (node.innerContent) {
+          node.cleanup = this.mountNode(node.data!.data, node.innerContent) ?? undefined
+        }
+      }
     }
     await new Promise(requestAnimationFrame)
     const isVertical = this.orientation === 'TB' || this.orientation === 'BT'

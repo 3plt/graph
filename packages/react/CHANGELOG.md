@@ -1,5 +1,13 @@
 # @3plate/graph-react
 
+## 0.1.16
+
+### Patch Changes
+
+- Allow react wrapper to render react nodes
+- Updated dependencies
+  - @3plate/graph-core@0.1.16
+
 ## 0.1.15
 
 ### Patch Changes

@@ -5,7 +5,7 @@
 export { Graph } from './Graph'
 export { Playground } from './Playground'
 
-export type { GraphProps } from './Graph'
+export type { GraphProps, APIOptions } from './Graph'
 export type { PlaygroundProps } from './Playground'
 
 // Re-export types from core for convenience
@@ -13,7 +13,6 @@ export type {
   // API types
   API,
   APIArguments,
-  APIOptions,
   Update,
   IngestionConfig,
   EventsOptions,

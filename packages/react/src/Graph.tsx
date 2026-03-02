@@ -4,7 +4,7 @@ import { flushSync } from 'react-dom'
 import { graph, type API } from '@3plate/graph-core'
 import type {
   APIArguments,
-  APIOptions,
+  APIOptions as APIOptions_,
   CanvasOptions,
   NodeProps,
   Update,
@@ -20,7 +20,7 @@ type ReactCanvasOptions<N> = Omit<CanvasOptions<N>, 'renderNode'> & {
 }
 
 /** APIOptions with the React-extended canvas options */
-type ReactAPIOptions<N, E> = Omit<APIOptions<N, E>, 'canvas'> & {
+export type APIOptions<N, E> = Omit<APIOptions_<N, E>, 'canvas'> & {
   canvas?: ReactCanvasOptions<N>
 }
 
@@ -34,22 +34,22 @@ export type GraphProps<N, E> = {
   /** Ingestion source configuration (alternative to nodes/edges/history) */
   ingestion?: IngestionConfig
   /** Options */
-  options?: ReactAPIOptions<N, E>
+  options?: APIOptions<N, E>
   /** Events */
   events?: APIArguments<N, E>['events']
 }
 
 /**
- * Converts ReactAPIOptions into core APIOptions.
+ * Converts APIOptions into core APIOptions.
  * When renderNode returns a ReactNode, a placeholder element is produced and
  * mountNode renders the React content into it synchronously via flushSync.
  */
 function buildCoreOptions<N, E>(
-  options: ReactAPIOptions<N, E> | undefined,
+  options: APIOptions<N, E> | undefined,
   pendingMounts: Map<HTMLElement, ReactNode>,
-): APIOptions<N, E> | undefined {
+): APIOptions_<N, E> | undefined {
   const userRenderNode = options?.canvas?.renderNode
-  if (!userRenderNode) return options as APIOptions<N, E> | undefined
+  if (!userRenderNode) return options as unknown as APIOptions_<N, E> | undefined
 
   return {
     ...options,
@@ -71,7 +71,7 @@ function buildCoreOptions<N, E>(
         return () => root.unmount()
       },
     },
-  } as APIOptions<N, E>
+  } as unknown as APIOptions_<N, E>
 }
 
 /**

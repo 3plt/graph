@@ -38,3 +38,5 @@ coverage/
 # Misc
 *.tgz
 .turbo/
+.claude/
+CLAUDE.md

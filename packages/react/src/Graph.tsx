@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, type ReactNode } from 'react'
-import { createRoot } from 'react-dom/client'
+import { createRoot, type Root } from 'react-dom/client'
 import { flushSync } from 'react-dom'
 import { graph, type API } from '@3plate/graph-core'
 import type {
@@ -41,15 +41,21 @@ export type GraphProps<N, E> = {
 
 /**
  * Converts APIOptions into core APIOptions.
- * When renderNode returns a ReactNode, a placeholder element is produced and
- * mountNode renders the React content into it synchronously via flushSync.
+ *
+ * When renderNode returns a ReactNode, a placeholder div is produced and
+ * mountNode renders the content into it synchronously via flushSync + createRoot.
+ *
+ * flushSync is safe here because graph() is called from a setTimeout,
+ * not directly inside a React lifecycle method.
  */
 function buildCoreOptions<N, E>(
   options: APIOptions<N, E> | undefined,
-  pendingMounts: Map<HTMLElement, ReactNode>,
+  roots: Map<HTMLElement, Root>,
 ): APIOptions_<N, E> | undefined {
   const userRenderNode = options?.canvas?.renderNode
   if (!userRenderNode) return options as unknown as APIOptions_<N, E> | undefined
+
+  const pending = new Map<HTMLElement, ReactNode>()
 
   return {
     ...options,
@@ -59,16 +65,20 @@ function buildCoreOptions<N, E>(
         const result = userRenderNode(node, nodeProps)
         if (result instanceof HTMLElement) return result
         const el = document.createElement('div')
-        pendingMounts.set(el, result)
+        pending.set(el, result)
         return el
       },
-      mountNode: (node: N, el: HTMLElement): (() => void) | void => {
-        const reactNode = pendingMounts.get(el)
-        if (reactNode === undefined) return
-        pendingMounts.delete(el)
+      mountNode: (_node: N, el: HTMLElement): (() => void) | void => {
+        const content = pending.get(el)
+        if (content === undefined) return
+        pending.delete(el)
         const root = createRoot(el)
-        flushSync(() => root.render(reactNode as ReactNode))
-        return () => root.unmount()
+        flushSync(() => root.render(content as ReactNode))
+        roots.set(el, root)
+        return () => {
+          roots.delete(el)
+          setTimeout(() => root.unmount(), 0)
+        }
       },
     },
   } as unknown as APIOptions_<N, E>
@@ -86,7 +96,7 @@ export function Graph<N, E>(props: GraphProps<N, E>) {
   const rootRef = useRef<HTMLDivElement>(null)
   const apiRef = useRef<API<N, E> | null>(null)
   const rootIdRef = useRef<string>(`graph-${Math.random().toString(36).slice(2, 11)}`)
-  const pendingMounts = useRef(new Map<HTMLElement, ReactNode>())
+  const reactRoots = useRef(new Map<HTMLElement, Root>())
 
   // Initialize API once
   useEffect(() => {
@@ -94,30 +104,35 @@ export function Graph<N, E>(props: GraphProps<N, E>) {
 
     rootRef.current.id = rootIdRef.current
 
-    graph({
-      root: rootIdRef.current,
-      nodes: props.nodes,
-      edges: props.edges,
-      history: props.history,
-      ingestion: props.ingestion,
-      options: buildCoreOptions(props.options, pendingMounts.current),
-      events: props.events,
-    }).then(api => {
-      apiRef.current = api
-    })
+    // Use setTimeout to escape the React lifecycle context.
+    // This allows flushSync inside mountNode to work without
+    // "flushSync was called from inside a lifecycle method" errors.
+    const timer = setTimeout(() => {
+      graph({
+        root: rootIdRef.current,
+        nodes: props.nodes,
+        edges: props.edges,
+        history: props.history,
+        ingestion: props.ingestion,
+        options: buildCoreOptions(props.options, reactRoots.current),
+        events: props.events,
+      }).then(api => {
+        apiRef.current = api
+      })
+    }, 0)
 
     return () => {
-      // Cleanup
+      clearTimeout(timer)
+      for (const root of reactRoots.current.values()) {
+        setTimeout(() => root.unmount(), 0)
+      }
+      reactRoots.current.clear()
       if (apiRef.current) {
         apiRef.current.destroy()
         apiRef.current = null
       }
       if (rootRef.current) {
-        // Remove canvas from DOM
-        const canvas = rootRef.current.querySelector('canvas, svg')
-        if (canvas) {
-          canvas.remove()
-        }
+        rootRef.current.innerHTML = ''
       }
     }
   }, []) // Only run once on mount
@@ -127,7 +142,7 @@ export function Graph<N, E>(props: GraphProps<N, E>) {
     if (!apiRef.current) return
     apiRef.current.applyProps({
       ...props,
-      options: buildCoreOptions(props.options, pendingMounts.current),
+      options: buildCoreOptions(props.options, reactRoots.current),
     })
   }, [props.nodes, props.edges, props.history, props.options])
 

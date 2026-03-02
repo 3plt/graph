@@ -195,7 +195,12 @@ export class Canvas<N, E> {
         }
       }
     }
-    await new Promise(requestAnimationFrame)
+    await new Promise<void>(resolve => {
+      let resolved = false
+      const done = () => { if (!resolved) { resolved = true; resolve() } }
+      requestAnimationFrame(done)
+      setTimeout(done, 50)
+    })
     const isVertical = this.orientation === 'TB' || this.orientation === 'BT'
     for (const node of newNodes.values()) {
       node.measure(isVertical)

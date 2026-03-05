@@ -1,6 +1,6 @@
 {
   "name": "@3plate/graph",
-  "version": "0.1.18",
+  "version": "0.1.19",
   "description": "Graph library with stable layout and incremental updates",
   "type": "module",
   "license": "GPL-3.0",

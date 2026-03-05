@@ -1,5 +1,11 @@
 # @3plate/graph-core
 
+## 0.1.18
+
+### Patch Changes
+
+- Improve node measurement
+
 ## 0.1.17
 
 ### Patch Changes

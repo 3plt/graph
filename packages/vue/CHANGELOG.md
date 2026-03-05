@@ -1,5 +1,12 @@
 # @3plate/graph-vue
 
+## 0.1.18
+
+### Patch Changes
+
+- Updated dependencies
+  - @3plate/graph-core@0.1.18
+
 ## 0.1.17
 
 ### Patch Changes

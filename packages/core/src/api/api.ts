@@ -355,6 +355,9 @@ export class API<N, E> {
     // In case the consumer doesn't call nav, still notify
     if (this.events.historyChange)
       this.events.historyChange(this.index, this.seq.length)
+
+    // Schedule a settle check to detect async style changes (CSS-in-JS)
+    this.canvas.scheduleSettleCheck()
   }
 
   private setNodePositions() {

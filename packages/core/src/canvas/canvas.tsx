@@ -48,6 +48,11 @@ export class Canvas<N, E> {
   curSegs!: Map<SegId, Seg>
   updating!: boolean
 
+  // Settle check state
+  private settleTimer?: ReturnType<typeof setTimeout>
+  private settleCount = 0
+  private settleMaxRebuilds = 2
+
   // Unique marker ID prefix for this canvas instance
   markerPrefix: string
 
@@ -864,8 +869,80 @@ export class Canvas<N, E> {
     }
   }
 
+  /**
+   * Schedule a settle check: periodically re-measure nodes in case
+   * async style injection (e.g. CSS-in-JS) changed their size after
+   * the initial measurement. If any node's size changed, triggers a
+   * rebuild to relayout the graph with correct dimensions.
+   */
+  scheduleSettleCheck() {
+    this.cancelSettleCheck()
+    this.settleCount = 0
+    this.doSettleCheck()
+  }
+
+  cancelSettleCheck() {
+    if (this.settleTimer) {
+      clearTimeout(this.settleTimer)
+      this.settleTimer = undefined
+    }
+  }
+
+  private doSettleCheck() {
+    const delay = this.settleCount === 0 ? 50 : 150
+    this.settleTimer = setTimeout(() => {
+      this.settleTimer = undefined
+      if (this.checkNodeSizes()) {
+        // Sizes changed — rebuild with fresh measurements.
+        // rebuild() will call scheduleSettleCheck() again via applyUpdate,
+        // so guard against infinite loops with a rebuild counter.
+        if (this.settleCount < this.settleMaxRebuilds) {
+          this.settleCount++
+          this.api.rebuild()
+        }
+      }
+    }, delay)
+  }
+
+  /**
+   * Re-measure every live non-dummy node by temporarily moving its
+   * content to the off-screen measurement container (synchronous,
+   * no visual flash). Returns true if any node's size changed.
+   */
+  private checkNodeSizes(): boolean {
+    if (!this.measurement) return false
+    const isVertical = this.orientation === 'TB' || this.orientation === 'BT'
+    let changed = false
+
+    for (const node of this.curNodes.values()) {
+      if (node.isDummy || !node.content) continue
+      const oldDims = node.data?.dims
+      if (!oldDims) continue
+
+      // Remember where the content lives in the live DOM
+      const parent = node.content.parentElement
+
+      // Move to measurement container and measure
+      this.measurement.appendChild(node.content)
+      const rect = node.content.getBoundingClientRect()
+
+      // Put it back
+      if (parent) parent.appendChild(node.content)
+
+      // Check for meaningful change (> 0.5px)
+      if (Math.abs(oldDims.w - rect.width) > 0.5 ||
+          Math.abs(oldDims.h - rect.height) > 0.5) {
+        changed = true
+        break
+      }
+    }
+
+    return changed
+  }
+
   /** Cleanup resources when the canvas is destroyed */
   destroy() {
+    this.cancelSettleCheck()
     this.dynamicStyleEl?.remove()
     this.dynamicStyleEl = undefined
     this.measurement?.remove()
